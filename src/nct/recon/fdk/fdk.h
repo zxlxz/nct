@@ -28,12 +28,14 @@ class FDK {
   auto exec(NdSlice<f32, 3> views) -> cuda::NdArray<f32, 3>;
 
  private:
+  auto fft_len() const -> u32;
+
   void init_weight();
-  void init_ramp_filter();
+  void init_ramp();
   void init_fft();
 
   void apply_weight(NdSlice<f32, 3> views);
-  void apply_ramp_filter(NdSlice<f32, 3> views);
+  void apply_ramp(NdSlice<f32, 3> views);
   void backward_project(NdSlice<f32, 3> views, NdSlice<f32, 3> vol);
 };
 

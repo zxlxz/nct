@@ -9,7 +9,7 @@ template <class T>
 class Buffer {
   T* _ptr = nullptr;
   usize _cap = 0;
-  MemType _mem = MemType::Heap;
+  MemType _mem = MemType::CPU;
 
  public:
   explicit Buffer() noexcept = default;
@@ -24,7 +24,7 @@ class Buffer {
   Buffer(Buffer&& other) noexcept : _ptr{other._ptr}, _cap{other._cap}, _mem{other._mem} {
     other._ptr = nullptr;
     other._cap = 0;
-    other._mem = MemType::Heap;
+    other._mem = MemType::CPU;
   }
 
   Buffer& operator=(Buffer&& other) noexcept {
@@ -34,11 +34,11 @@ class Buffer {
     this->reset();
     _ptr = other._ptr, other._ptr = nullptr;
     _cap = other._cap, other._cap = 0;
-    _mem = other._mem, other._mem = MemType::Heap;
+    _mem = other._mem, other._mem = MemType::CPU;
     return *this;
   }
 
-  static auto with_capacity(usize capacity, MemType mem_type = MemType::Heap) -> Buffer {
+  static auto with_capacity(usize capacity, MemType mem_type = MemType::CPU) -> Buffer {
     auto res = Buffer{};
     res._ptr = static_cast<T*>(detail::alloc(capacity * sizeof(T), mem_type));
     res._cap = capacity;
@@ -52,7 +52,7 @@ class Buffer {
     }
     _ptr = nullptr;
     _cap = 0;
-    _mem = MemType::Heap;
+    _mem = MemType::CPU;
   }
 
   auto ptr() const noexcept -> T* {
@@ -68,17 +68,17 @@ class Buffer {
   }
 
   void sync_cpu() {
-    if (_mem != MemType::Managed) {
+    if (_mem != MemType::MIXED) {
       return;
     }
-    detail::msync(_ptr, _cap * sizeof(T), MemType::Host);
+    detail::msync(_ptr, _cap * sizeof(T), MemType::CPU);
   }
 
   void sync_gpu() {
-    if (_mem != MemType::Managed) {
+    if (_mem != MemType::MIXED) {
       return;
     }
-    return detail::msync(_ptr, _cap * sizeof(T), MemType::Device);
+    return detail::msync(_ptr, _cap * sizeof(T), MemType::GPU);
   }
 };
 
@@ -101,7 +101,7 @@ class NdArray {
   NdArray(const NdArray&) = delete;
   NdArray& operator=(const NdArray&) = delete;
 
-  static auto with_dim(Dim dims, MemType mem_type = MemType::Heap) -> NdArray {
+  static auto with_dim(Dim dims, MemType mem_type = MemType::CPU) -> NdArray {
     const auto step = math::make_step(dims);
     const auto capacity = (&dims.x)[N - 1] * (&step.x)[N - 1];
 

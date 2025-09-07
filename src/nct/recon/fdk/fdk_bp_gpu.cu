@@ -104,7 +104,7 @@ __global__ void _fdk_bp_gpu(const BpParams params,
 void fdk_bp_gpu(const FdkBpParams& p, NdSlice<f32x3> src, LTex<f32, 2> det, NdSlice<f32, 3> vol) {
   const auto gpu_params = BpParams::from(p);
 
-  const auto gpu_trans = cuda::NdArray<BpTrans>::with_dim(src.dims(), MemType::Managed);
+  const auto gpu_trans = cuda::NdArray<BpTrans>::with_dim(src.dims(), MemType::MIXED);
   _fdk_bp_init_trans(p, src, *gpu_trans);
 
   // bp

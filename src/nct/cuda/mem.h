@@ -10,10 +10,9 @@ namespace nct::cuda {
 using arr_t = cudaArray*;
 
 enum class MemType {
-  Heap = 0,
-  Host = 1,
-  Device = 2,
-  Managed = 3,
+  CPU = 0,
+  GPU = 1,
+  MIXED = 2,
 };
 
 namespace detail {

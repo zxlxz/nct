@@ -10,23 +10,18 @@ auto alloc(usize size, MemType type) -> void* {
 
   switch (type) {
     default:
-    case MemType::Heap:
+    case MemType::CPU:
       ptr = ::operator new(size);
       if (ptr == nullptr) {
         throw cuda::Error{cudaErrorMemoryAllocation};
       }
       break;
-    case MemType::Host:
-      if (auto err = ::cudaMallocHost(&ptr, size)) {
-        throw cuda::Error{err};
-      }
-      break;
-    case MemType::Device:
+    case MemType::GPU:
       if (auto err = ::cudaMalloc(&ptr, size)) {
         throw cuda::Error{err};
       }
       break;
-    case MemType::Managed:
+    case MemType::MIX:
       if (auto err = ::cudaMallocManaged(&ptr, size)) {
         throw cuda::Error{err};
       }
