@@ -69,7 +69,7 @@ struct BpTrans {
 static void _fdk_bp_init_trans(const FdkBpParams& p, NdSlice<f32x3> src, NdSlice<BpTrans> dst) {
   const auto cnt = src._dims.x;
   for (auto i = 0U; i < cnt; ++i) {
-    dst[i] = BpTrans::from(p.SAD, p.SDD, src[i]);
+    dst[{i}] = BpTrans::from(p.SAD, p.SDD, src[{i}]);
   }
 }
 
@@ -104,7 +104,7 @@ __global__ void _fdk_bp_gpu(const BpParams params,
 void fdk_bp_gpu(const FdkBpParams& p, NdSlice<f32x3> src, LTex<f32, 2> det, NdSlice<f32, 3> vol) {
   const auto gpu_params = BpParams::from(p);
 
-  const auto gpu_trans = cuda::NdArray<BpTrans>::with_dim(src.dims(), MemType::MIXED);
+  const auto gpu_trans = NdArray<BpTrans>::with_dim(src.dims(), MemType::MIXED);
   _fdk_bp_init_trans(p, src, *gpu_trans);
 
   // bp

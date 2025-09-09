@@ -28,7 +28,7 @@ __global__ void _fdk_apply_ramp_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> wind
     return;
   }
 
-  const auto k = window[iu];
+  const auto k = window[{iu}];
   auto& c = fft_c[{iu, iv}];
   c.real *= k;
   c.imag *= k;

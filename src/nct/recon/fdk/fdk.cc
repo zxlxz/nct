@@ -7,23 +7,22 @@ namespace nct::recon {
 using namespace math;
 using namespace cuda;
 
-FDK::FDK() {}
+FDK::FDK(const Geo& geo) : _geo{geo} {}
 
-FDK::~FDK() {}
+FDK::~FDK() noexcept {}
 
-void FDK::init(const Geo& geo, u32x3 shape, f32x3 pixel) {
-  _geo = geo;
+void FDK::init(u32x3 shape, f32x3 pixel) {
   _vol_shape = shape;
   _vol_pixel = pixel;
 
   this->init_weight();
-  this->init_ramp();
+  this->init_ramplak();
   this->init_fft();
 }
 
-auto FDK::exec(NdSlice<f32, 3> views) -> cuda::NdArray<f32, 3> {
+auto FDK::exec(NdSlice<f32, 3> views) -> NdArray<f32, 3> {
   this->apply_weight(views);
-  this->apply_ramp(views);
+  this->apply_ramplak(views);
 
   auto vol = NdArray<f32, 3>::with_dim(_vol_shape, MemType::GPU);
   this->backward_project(views, *vol);
@@ -39,16 +38,16 @@ auto FDK::fft_len() const -> u32 {
 }
 
 void FDK::init_weight() {
-  _weight = cuda::NdArray<f32, 2>::with_dim({_geo.ndet_u, _geo.ndet_v}, cuda::MemType::MIXED);
+  _weight = NdArray<f32, 2>::with_dim({_geo.ndet_u, _geo.ndet_v}, MemType::MIXED);
   fdk_init_weight_cpu(*_weight, _geo);
 }
 
-void FDK::init_ramp() {
+void FDK::init_ramplak() {
   const auto full_len = this->fft_len();
   const auto half_len = full_len / 2 + 1;
-  
-  _ramp_filter = cuda::NdArray<f32, 1>::with_dim({half_len}, cuda::MemType::MIXED);
-  fdk_init_ramp_cpu(*_ramp_filter);
+
+  _ramplak_win = NdArray<f32, 1>::with_dim({half_len}, MemType::MIXED);
+  fdk_init_ramplak_cpu(*_ramplak_win);
 }
 
 void FDK::init_fft() {
@@ -62,19 +61,19 @@ void FDK::apply_weight(NdSlice<f32, 3> views) {
   fdk_apply_weight_gpu(views, *_weight);
 }
 
-void FDK::apply_ramp(NdSlice<f32, 3> views) {
-  _ramp_filter.sync_gpu();
+void FDK::apply_ramplak(NdSlice<f32, 3> views) {
+  _ramplak_win.sync_gpu();
 
   const auto full_len = this->fft_len();
   const auto half_len = full_len / 2 + 1;
-  auto tmp_r = cuda::NdArray<f32, 2>::with_dim({full_len, _geo.ndet_v});
-  auto tmp_c = cuda::NdArray<cf32, 2>::with_dim({half_len, _geo.ndet_v});
+  auto tmp_r = NdArray<f32, 2>::with_dim({full_len, _geo.ndet_v});
+  auto tmp_c = NdArray<cf32, 2>::with_dim({half_len, _geo.ndet_v});
 
   for (auto iview = 0U; iview < views._dims.z; ++iview) {
     auto view = views.slice(iview, ALL{}, ALL{});
     cuda::copy2d(view, *tmp_r);
     _fft_r2c(tmp_r.data(), tmp_c.data());
-    fdk_apply_ramp_gpu(*tmp_c, *_ramp_filter);
+    fdk_apply_ramplak_gpu(*tmp_c, *_ramplak_win);
     _fft_c2r(tmp_c.data(), tmp_r.data());
     cuda::copy2d(*tmp_r, view);
   }
@@ -92,7 +91,7 @@ void FDK::backward_project(NdSlice<f32, 3> views, NdSlice<f32, 3> vol) {
 
   const auto nview = views._dims.z;
 
-  auto src = cuda::NdArray<f32x3>::with_dim({nview}, MemType::MIXED);
+  auto src = NdArray<f32x3>::with_dim({nview}, MemType::MIXED);
   for (auto i = 0u; i < nview; i++) {
     src[{i}] = _geo.src_pos(i);
   }

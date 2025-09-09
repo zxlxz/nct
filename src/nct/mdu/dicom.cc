@@ -28,7 +28,7 @@ struct DcmElmtReader {
     }
 
     auto res = String{};
-    res.write_str({_buf._ptr, len});
+    res.write_str(Str::from_u8({_buf._ptr, len}));
     _buf._ptr += len;
     _buf._len -= len;
     return res;

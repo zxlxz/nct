@@ -33,14 +33,6 @@ struct NdSlice<T, 1> {
     return (idxs.x < _dims.x);
   }
 
-  __hd__ auto operator[](u32 idx) const -> T {
-    return _data[idx * _step.x];
-  }
-
-  __hd__ auto operator[](u32 idx) -> T& {
-    return _data[idx * _step.x];
-  }
-
   __hd__ auto operator[](idxs_t idxs) const -> T {
     return _data[idxs.x * _step.x];
   }

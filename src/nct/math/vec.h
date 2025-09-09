@@ -212,13 +212,13 @@ __hd__ inline auto rot(f32 a) noexcept -> f32x2 {
 }
 
 __hd__ inline auto norm(f32x2 v) noexcept -> f32x2 {
-  const auto k = rsqrtf(v.x * v.x + v.y * v.y);
-  return k * v;
+  const auto s = sqrtf(v.x * v.x + v.y * v.y);
+  return {v.x / s, v.y / s};
 }
 
 __hd__ inline auto norm(f32x3 v) noexcept -> f32x3 {
-  const auto k = rsqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
-  return k * v;
+  const auto s = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+  return {v.x / s, v.y / s, v.z / s};
 }
 
 __hd__ inline auto dot(f32x2 a, f32x2 b) noexcept -> f32 {

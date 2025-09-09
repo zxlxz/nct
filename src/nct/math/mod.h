@@ -1,6 +1,5 @@
 #pragma once
 
-#include <math.h>
 #include "nct/core.h"
 
 #ifndef __CUDACC__
@@ -11,7 +10,7 @@
 
 namespace nct::math {
 
-static constexpr auto PI = 3.14159265358979323846;
+static constexpr auto PI = 3.14159267F;
 
 template <class T>
 struct alignas(sizeof(T) * 2) Complex {
@@ -21,11 +20,5 @@ struct alignas(sizeof(T) * 2) Complex {
 
 using cf32 = Complex<f32>;
 using cf64 = Complex<f64>;
-
-#ifndef __CUDACC__
-static inline auto rsqrtf(float x) -> float {
-  return 1.0f / sqrtf(x);
-}
-#endif
 
 }  // namespace nct::math
