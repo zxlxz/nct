@@ -1,69 +1,62 @@
 #include "nct/mdu/dicom.h"
+#include <sfc/io.h>
 
 namespace nct::mdu {
 
-struct DcmElmtReader {
-  Slice<const u8> _buf;
+struct DcmDecoder {
+  Slice<const u8> _inn;
 
  public:
   template <class T>
   auto read() -> Option<T> {
     static_assert(__is_trivially_copyable(T));
 
-    if (_buf._len < sizeof(T)) {
+    if (_inn._len < sizeof(T)) {
       return {};
     }
-
-    const auto p = _buf._ptr;
-    _buf._ptr += sizeof(T);
-    _buf._len -= sizeof(T);
-
-    auto res = ptr::read_unaligned<T>(p);
-    return res;
+    const auto [a, b] = _inn.split_at(sizeof(T));
+    _inn = b;
+    return ptr::read_unaligned<T>(a._ptr);
   }
 
-  auto read_str(u32 len) -> String {
-    if (_buf._len < len) {
+  auto read_buf(usize len) -> Slice<const u8> {
+    if (_inn._len < len) {
       return {};
     }
-
-    auto res = String{};
-    res.write_str(Str::from_u8({_buf._ptr, len}));
-    _buf._ptr += len;
-    _buf._len -= len;
-    return res;
+    const auto [a, b] = _inn.split_at(len);
+    _inn = b;
+    return a;
   }
 
-  auto read_vec(u32 len) -> Vec<u8> {
-    if (_buf._len < len) {
+  auto read_str(usize len) -> Str {
+    if (_inn._len < len) {
       return {};
     }
-
-    auto res = Vec<u8>{};
-    res.extend_from_slice({_buf._ptr, len});
-    _buf._ptr += len;
-    _buf._len -= len;
-    return res;
+    const auto [a, b] = _inn.split_at(len);
+    _inn = b;
+    return Str::from_u8(a);
   }
 };
 
-struct DcmElmtWriter {
-  Vec<u8>& _buf;
+struct DcmEncoder {
+  Vec<u8>& _inn;
 
  public:
   template <class T>
   void write(const T& val) {
     static_assert(__is_trivially_copyable(T));
-    _buf.reserve(sizeof(T));
-    _buf.extend_from_slice({reinterpret_cast<const u8*>(&val), sizeof(T)});
+
+    _inn.reserve(sizeof(T));
+    ptr::write_unaligned(_inn.as_mut_ptr() + _inn.len(), val);
+    _inn.set_len(_inn.len() + sizeof(T));
   }
 
-  void write(const String& str) {
-    _buf.extend_from_slice(str.as_str().as_bytes());
+  void write_buf(Slice<const u8> buf) {
+    _inn.extend_from_slice(buf);
   }
 
-  void write(const Vec<u8>& bin) {
-    _buf.extend_from_slice(bin.as_slice());
+  void write_str(Str buf) {
+    _inn.extend_from_slice(buf.as_bytes());
   }
 };
 
@@ -128,7 +121,8 @@ auto DcmElmt::decode_head(Slice<const u8> buf) -> usize {
   if (buf._len < 8) {
     return 0;
   }
-  auto reader = DcmElmtReader{buf};
+
+  auto reader = DcmDecoder{buf};
   _tag = reader.read<DcmTag>().unwrap();
   _vr = reader.read<DcmVR>().unwrap();
   _vl = reader.read<u16>().unwrap();
@@ -153,23 +147,23 @@ auto DcmElmt::decode_data(Slice<const u8> buf) -> usize {
     return 0;
   }
 
-  auto reader = DcmElmtReader{buf};
+  auto decoder = DcmDecoder{buf};
   if (_vr.is_i16()) {
-    _val = reader.read<i16>().unwrap_or({});
+    _val = decoder.read<i16>().unwrap_or({});
   } else if (_vr.is_u16()) {
-    _val = reader.read<u16>().unwrap_or({});
+    _val = decoder.read<u16>().unwrap_or({});
   } else if (_vr.is_i32()) {
-    _val = reader.read<i32>().unwrap_or({});
+    _val = decoder.read<i32>().unwrap_or({});
   } else if (_vr.is_u32()) {
-    _val = reader.read<u32>().unwrap_or({});
+    _val = decoder.read<u32>().unwrap_or({});
   } else if (_vr.is_f32()) {
-    _val = reader.read<f32>().unwrap_or({});
+    _val = decoder.read<f32>().unwrap_or({});
   } else if (_vr.is_f64()) {
-    _val = reader.read<f64>().unwrap_or({});
+    _val = decoder.read<f64>().unwrap_or({});
   } else if (_vr.is_str()) {
-    _val = reader.read_str(_vl);
+    _val = String::from(decoder.read_str(_vl));
   } else {
-    _val = reader.read_vec(_vl);
+    _val = Vec<u8>::from(decoder.read_buf(_vl));
   }
 
   return _vl;
@@ -188,7 +182,7 @@ auto DcmElmt::decode(Slice<const u8> buf) -> usize {
 }
 
 void DcmElmt::encode(Vec<u8>& buf) {
-  auto writer = DcmElmtWriter{buf};
+  auto writer = DcmEncoder{buf};
   writer.write(_tag);
   writer.write(_vr);
 
@@ -199,7 +193,7 @@ void DcmElmt::encode(Vec<u8>& buf) {
     writer.write(_vl);
   }
 
-  _val.map([&](const auto& t) { writer.write(t); });
+  _val.map([&](const auto& t) {});
 }
 
 }  // namespace nct::mdu

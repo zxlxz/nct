@@ -3,18 +3,18 @@
 #include "nct/cuda.h"
 #include "nct/math.h"
 
-namespace nct::correct {
+namespace nct::correction {
 
 using namespace math;
 
-class Correct {
+class DetCorr {
   NdArray<f32, 2> _dark_tbl;         // [ndet_u, ndet_v]
   NdArray<f32, 2> _air_tbl;          // [ndet_u, ndet_v]
   NdArray<f32, 1> _beam_harden_tbl;  // [ndet_u]
 
  public:
-  Correct() noexcept;
-  ~Correct() noexcept;
+  DetCorr() noexcept;
+  ~DetCorr() noexcept;
 
   void set_dark_tbl(NdArray<f32, 2> dark);
   void set_air_tbl(NdArray<f32, 2> air);
@@ -23,4 +23,4 @@ class Correct {
   void exec(NdSlice<f32, 3> views);
 };
 
-}  // namespace nct::correct
+}  // namespace nct::correction

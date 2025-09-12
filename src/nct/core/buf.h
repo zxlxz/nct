@@ -14,8 +14,6 @@ struct Alloc {
   MemType _type = MemType::CPU;
 
  public:
-  Alloc(MemType type = MemType::CPU) : _type{type} {}
-
   auto alloc(usize size) -> void*;
   void dealloc(void* ptr);
   void sync_cpu(void* ptr, usize size);

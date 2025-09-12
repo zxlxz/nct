@@ -4,22 +4,22 @@
 
 namespace nct::mdu {
 
-class MduList {
+class MduTbl {
   Vec<DcmElmt> _elmts;
 
  public:
-  MduList() noexcept;
-  ~MduList() noexcept;
+  MduTbl() noexcept;
+  ~MduTbl() noexcept;
 
-  MduList(MduList&&) noexcept = default;
-  MduList& operator=(MduList&&) noexcept = default;
+  MduTbl(MduTbl&&) noexcept = default;
+  MduTbl& operator=(MduTbl&&) noexcept = default;
 
-  MduList(const MduList&) = delete;
-  MduList& operator=(const MduList&) = delete;
+  MduTbl(const MduTbl&) = delete;
+  MduTbl& operator=(const MduTbl&) = delete;
 
-  static auto load(Str path) -> MduList;
+  static auto load(Str path) -> MduTbl;
 
-  static auto from_buf(Slice<const u8> buf) -> MduList;
+  static auto from_buf(Slice<const u8> buf) -> MduTbl;
 
   auto as_slice() const -> Slice<const DcmElmt>;
 

@@ -23,12 +23,12 @@ class NdArray {
   NdArray(const NdArray&) = delete;
   NdArray& operator=(const NdArray&) = delete;
 
-  static auto with_dim(Dim dims, Alloc alloc = {}) -> NdArray {
+  static auto with_dim(Dim dims, MemType mtype = MemType::CPU) -> NdArray {
     const auto step = math::make_step(dims);
     const auto capacity = (&dims.x)[N - 1] * (&step.x)[N - 1];
 
     auto res = NdArray{};
-    res._buf = Buf::with_capacity(capacity, mem::move(alloc));
+    res._buf = Buf::with_capacity(capacity, {mtype});
     res._inn = Inn{res._buf.ptr(), dims, step};
     return res;
   }

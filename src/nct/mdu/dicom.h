@@ -1,15 +1,12 @@
 #pragma once
 
-#include "sfc/core.h"
-#include "sfc/alloc.h"
+#include <sfc/alloc.h>
 
 namespace nct::mdu {
 
 using namespace sfc;
 
 using DcmVL = u32;
-
-using DcmVal = Variant<i16, u16, i32, u32, f32, f64, String, Vec<u8>>;
 
 struct DcmTag {
   u16 group = 0;
@@ -64,6 +61,46 @@ struct DcmVR {
   }
 };
 
+struct DcmVal {
+  Variant<i16, u16, i32, u32, f32, f64, String, Vec<u8>> _inn;
+
+ public:
+  template <class T>
+  DcmVal(T val) noexcept : _inn{static_cast<T&&>(val)} {}
+
+  ~DcmVal() noexcept {}
+
+  DcmVal(DcmVal&&) noexcept = default;
+  DcmVal& operator=(DcmVal&&) noexcept = default;
+
+  template <class T>
+  auto is() const -> bool {
+    return _inn.template is<T>();
+  }
+
+  template <class T>
+  auto as() const -> const T& {
+    return _inn.template as<T>();
+  }
+
+  void map(auto&& f) const {
+    _inn.map(f);
+  }
+
+  auto as_bytes() const -> Slice<const u8> {
+    return _inn.template as<Vec<u8>>().as_slice();
+  }
+
+  void fmt(auto& f) const {
+    if (_inn.is<Vec<u8>>()) {
+      auto buf = this->as_bytes();
+      f.write_fmt("bin(len={})", buf.len());
+    } else {
+      _inn.fmt(f);
+    }
+  }
+};
+
 class DcmElmt {
   DcmTag _tag = {};  // 4B
   DcmVR _vr = {};    // 2B
@@ -83,13 +120,12 @@ class DcmElmt {
     return _vl;
   }
 
+  auto val() const -> const DcmVal& {
+    return _val;
+  }
+
   void fmt(auto& f) const {
-    f.write_fmt("{}:{} ", _tag, _vr);
-    if (_val.is<Vec<u8>>()) {
-      f.write_fmt("bin(len={})", _vl);
-    } else {
-      f.write_fmt("{}", _val);
-    }
+    f.write_fmt("{}:{} {}", _tag, _vr, _val);
   }
 
   auto decode(Slice<const u8> buf) -> usize;

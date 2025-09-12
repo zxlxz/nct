@@ -3,11 +3,11 @@
 
 namespace nct::mdu {
 
-MduList::MduList() noexcept {}
+MduTbl::MduTbl() noexcept {}
 
-MduList::~MduList() noexcept {}
+MduTbl::~MduTbl() noexcept {}
 
-auto MduList::load(Str path) -> MduList {
+auto MduTbl::load(Str path) -> MduTbl {
   auto file_res = fs::File::open(path);
   if (file_res.is_err()) {
     return {};
@@ -15,15 +15,15 @@ auto MduList::load(Str path) -> MduList {
 
   auto file = mem::move(file_res).unwrap();
   auto buf = Vec<u8>{};
-  if (file.read_all(buf).is_err()) {
+  if (file.read_to_end(buf).is_err()) {
     return {};
   }
 
-  return MduList::from_buf(buf.as_slice());
+  return MduTbl::from_buf(buf.as_slice());
 }
 
-auto MduList::from_buf(Slice<const u8> buf) -> MduList {
-  auto res = MduList{};
+auto MduTbl::from_buf(Slice<const u8> buf) -> MduTbl {
+  auto res = MduTbl{};
   for (auto pos = 0U;;) {
     auto tmp = DcmElmt{};
     auto len = tmp.decode(buf[{pos, _}]);
@@ -36,11 +36,11 @@ auto MduList::from_buf(Slice<const u8> buf) -> MduList {
   return res;
 }
 
-auto MduList::as_slice() const -> Slice<const DcmElmt> {
+auto MduTbl::as_slice() const -> Slice<const DcmElmt> {
   return _elmts.as_slice();
 }
 
-auto MduList::get(DcmTag tag) const -> Option<const DcmElmt&> {
+auto MduTbl::get(DcmTag tag) const -> Option<const DcmElmt&> {
   for (const auto& elmt : _elmts) {
     if (elmt.tag() == tag) {
       return elmt;

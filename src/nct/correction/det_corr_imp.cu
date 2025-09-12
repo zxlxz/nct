@@ -1,8 +1,9 @@
 #pragma once
 
-#include "nct/correct/correct_imp.h"
+#include "nct/correction/det_corr_imp.h"
+#include "nct/cuda.h"
 
-namespace nct::correct {
+namespace nct::correction {
 
 using namespace math;
 using namespace cuda;
@@ -36,10 +37,10 @@ struct Coeffs {
   }
 };
 
-__global__ void _corr_apply_prelog_gpu(NdSlice<f32, 3> views,
-                                       NdSlice<f32, 2> dark_tbl,
-                                       NdSlice<f32, 2> air_tbl,
-                                       Coeffs coeffs) {
+__global__ void _det_corr_apply_all_gpu(NdSlice<f32, 3> views,
+                                        NdSlice<f32, 2> dark_tbl,
+                                        NdSlice<f32, 2> air_tbl,
+                                        Coeffs coeffs) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -54,8 +55,8 @@ __global__ void _corr_apply_prelog_gpu(NdSlice<f32, 3> views,
   for (auto iview = 0U; iview < views._dims.z; ++iview) {
     const auto raw = ptr[iview * views._step.z];
 
-    const auto corr = raw - dark;
-    const auto norm = corr / (air - dark + 1e-10f);
+    const auto correction = raw - dark;
+    const auto norm = correction / (air - dark + 1e-10f);
 
     const auto p_val = -logf(fmaxf(norm, 1e-10f));
     const auto p_corr = coeffs(p_val);
@@ -64,15 +65,15 @@ __global__ void _corr_apply_prelog_gpu(NdSlice<f32, 3> views,
   }
 }
 
-void corr_apply_prelog_gpu(NdSlice<f32, 3> views,
-                           NdSlice<f32, 2> dark_tbl,
-                           NdSlice<f32, 2> air_tbl,
-                           NdSlice<f32, 1> coeffs_tbl) {
+void det_corr_apply_all_gpu(NdSlice<f32, 3> views,
+                            NdSlice<f32, 2> dark_tbl,
+                            NdSlice<f32, 2> air_tbl,
+                            NdSlice<f32, 1> coeffs_tbl) {
   const auto coeffs = Coeffs::from(coeffs_tbl);
 
   const auto trds = dim3(8, 8);
   const auto dims = views._dims;
-  CUDA_RUN(_corr_apply_prelog_gpu, dims, trds)(views, dark_tbl, air_tbl, coeffs);
+  CUDA_RUN(_det_corr_apply_all_gpu, dims, trds)(views, dark_tbl, air_tbl, coeffs);
 }
 
-}  // namespace nct::correct
+}  // namespace nct::correction
