@@ -104,13 +104,13 @@ __global__ void _fdk_bp_gpu(const BpParams params,
 void fdk_bp_gpu(const FdkBpParams& p, NdSlice<f32x3> src, LTex<f32, 2> det, NdSlice<f32, 3> vol) {
   const auto gpu_params = BpParams::from(p);
 
-  const auto gpu_trans = NdArray<BpTrans>::with_dim(src.dims(), MemType::MIXED);
+  auto gpu_trans = NdArray<BpTrans>::with_dim(src.dims(), MemType::MIXED);
   _fdk_bp_init_trans(p, src, *gpu_trans);
 
   // bp
-  const auto dims = det._dim;
   const auto trds = dim3{8, 8, 4};
-  CUDA_RUN(_fdk_bp_gpu, dims, trds)(gpu_params, gpu_trans.data(), vol, det);
+  const auto blks = cuda::make_blk(vol._dims, trds);
+  CUDA_RUN(_fdk_bp_gpu, blks, trds)(gpu_params, gpu_trans.data(), vol, det);
 }
 
 }  // namespace nct::recon

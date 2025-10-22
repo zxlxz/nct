@@ -77,8 +77,8 @@ static const auto gridDim = dim3{1, 1, 1};
 
 #endif
 
-template <class T, int N, class DIM3>
-static auto make_blk(const math::vec<T, N>& dim, const DIM3& trd) -> DIM3 {
+template <class DIM3, u32 N>
+static auto make_blk(math::nvec<u32, N> dim, DIM3 trd) -> DIM3 {
   auto res = DIM3{1, 1, 1};
   if constexpr (N >= 1) {
     res.x = (dim.x + trd.x - 1) / trd.x;
@@ -97,7 +97,7 @@ static auto make_blk(const math::vec<T, N>& dim, const DIM3& trd) -> DIM3 {
 #if !defined(__CUDACC__) || defined(__INTELLISENSE__)
 #define CUDA_RUN(f, ...) f
 #else
-#define CUDA_RUN(f, dims, trds, ...) f<<<::nct::cuda::make_blk(dims, trds), trds, __VA_ARGS__>>>
+#define CUDA_RUN(f, ...) f<<<__VA_ARGS__>>>
 #endif
 
 #if !defined(__CUDACC__) && !defined(__device__)

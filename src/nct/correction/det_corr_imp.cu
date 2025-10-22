@@ -71,9 +71,9 @@ void det_corr_apply_all_gpu(NdSlice<f32, 3> views,
                             NdSlice<f32, 1> coeffs_tbl) {
   const auto coeffs = Coeffs::from(coeffs_tbl);
 
-  const auto trds = dim3(8, 8);
-  const auto dims = views._dims;
-  CUDA_RUN(_det_corr_apply_all_gpu, dims, trds)(views, dark_tbl, air_tbl, coeffs);
+  const auto trds = dim3{8, 8, 1};
+  const auto blks = cuda::make_blk(views._dims, trds);
+  CUDA_RUN(_det_corr_apply_all_gpu, blks, trds)(views, dark_tbl, air_tbl, coeffs);
 }
 
 }  // namespace nct::correction

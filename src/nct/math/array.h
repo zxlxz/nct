@@ -4,14 +4,15 @@
 
 namespace nct::math {
 
-template <class T, int N = 1>
+template <class T, u32 N = 1>
 class NdArray {
-  using Buf = nct::RawBuf<T>;
-  using Inn = math::NdSlice<T, N>;
-  using Dim = math::vec<u32, N>;
+  using dims_t = math::nvec<u32, N>;
+  using idxs_t = math::nvec<u32, N>;
+  using view_t = math::NdSlice<T, N>;
+  using data_t = nct::RawBuf<T>;
 
-  Inn _inn{};
-  Buf _buf{};
+  view_t _view{};
+  data_t _data{};
 
  public:
   NdArray() noexcept = default;
@@ -23,54 +24,64 @@ class NdArray {
   NdArray(const NdArray&) = delete;
   NdArray& operator=(const NdArray&) = delete;
 
-  static auto with_dim(Dim dims, MemType mtype = MemType::CPU) -> NdArray {
-    const auto step = math::make_step(dims);
-    const auto capacity = (&dims.x)[N - 1] * (&step.x)[N - 1];
+  static auto with_dim(dims_t dims, MemType mtype = MemType::CPU) -> NdArray {
+    const auto strides = math::make_strides(dims);
+    const auto capacity = (&dims.x)[N - 1] * (&strides.x)[N - 1];
 
     auto res = NdArray{};
-    res._buf = Buf::with_capacity(capacity, {mtype});
-    res._inn = Inn{res._buf.ptr(), dims, step};
+    res._data = data_t::with_capacity(capacity, {mtype});
+    res._view = view_t{res._data.ptr(), dims, strides};
     return res;
   }
 
-  auto operator*() const -> Inn {
-    return _inn;
+  auto operator*() -> view_t {
+    return _view;
   }
 
-  auto operator[](const Dim& idx) const -> T {
-    return _inn[idx];
+  auto operator[](const dims_t& idx) const -> T {
+    return _view[idx];
   }
 
-  auto operator[](const Dim& idx) -> T& {
-    return _inn[idx];
+  auto operator[](const dims_t& idx) -> T& {
+    return _view[idx];
   }
 
   auto data() const -> T* {
-    return _inn._data;
+    return _view._data;
   }
 
-  auto dims() const -> const Dim& {
-    return _inn._dims;
-  }
-
-  auto step() const -> const Dim& {
-    return _inn._step;
+  auto dims() const -> const dims_t& {
+    return _view._dims;
   }
 
   auto size() const -> u32 {
-    return _inn.size();
+    return _view.size();
   }
 
-  auto slice(Dim start, Dim end) const -> Inn {
-    return _inn.slice(start, end);
+  auto slice(dims_t start, dims_t end) const -> view_t {
+    return _view.slice(start, end);
   }
 
   void sync_cpu() {
-    return _buf.sync_cpu();
+    return _data.sync_cpu();
   }
 
   void sync_gpu() {
-    return _buf.sync_gpu();
+    return _data.sync_gpu();
+  }
+
+#ifndef __CUDACC__
+  auto as_bytes_mut() -> sfc::Slice<u8> {
+    const auto ptr = static_cast<void*>(_data.ptr());
+    const auto cap = _data.cap();
+    return {static_cast<u8*>(ptr), cap * sizeof(T)};
+  }
+#endif
+
+  // trait: fmt::Display
+  void fmt(auto& f) const {
+    auto imp = f.debug_struct();
+    imp.field("dims", _view._dims);
   }
 };
 

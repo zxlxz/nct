@@ -32,12 +32,12 @@ class FDK {
   auto fft_len() const -> u32;
 
   void init_weight();
-  void init_ramplak();
+  void init_filter();
   void init_fft();
 
-  void apply_weight(NdSlice<f32, 3> views);
-  void apply_ramplak(NdSlice<f32, 3> views);
-  void backward_project(NdSlice<f32, 3> views, NdSlice<f32, 3> vol);
+  void pre_weight(NdSlice<f32, 3> views);
+  void fdk_filter(NdSlice<f32, 3> views);
+  void cone_bp(NdSlice<f32, 3> views, NdSlice<f32, 3> vol);
 };
 
 }  // namespace nct::recon

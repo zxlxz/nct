@@ -1,93 +1,189 @@
 #pragma once
 
-#include "nct/math.h"
+#include "nct/params/hdr.h"
 
 namespace nct::params {
 
 struct ScanParam {
   static constexpr auto TAG = u16{0x1011U};
+  i32 RawDataUID;
+  i32 TubeCurrent_ma;
+  i32 TubeVVoltage_kv;
+  i32 AnodeSpeed_Hz;  // default[50]
+  i32 bCompensator;   // default[0]
+  i32 eFsSize;        // [FS_SS, FS_LL, FS_SL]
+  i32 nFFS;           // number of flying focal spots [1, 2]
+  i32 EDiagnosticLevel;
+  i32 eScanMode;
+  i32 eManualAuto;
+  i32 eTrigger;
+  i32 eAutoTilt;
+  i32 eAutoInOut;
+  i32 nUsedDetectorLines;
+  i32 SliceWidth_mm;
+  i32 eFsSwitchMode;
+  i32 aFsSwitchSequence[MAX_FFS];
+  f32 FsSizeX_mm;
+  f32 FsSizeZ_mm;
+  i32 eWedgeType;
+  i32 bTemperatureReading;
+  i32 nTemperatureSamples;
+  i32 nCycles;
+  f32 aSpare1[4];
+  i32 FrontBladeErrorSlices;
+  i32 RearBladeErrorSlices;
+  f32 FrontCollimatorToCenter_mm;
+  f32 RearCollimatorToCenter_mm;
+  f32 FrontCollimatorPosition_mm_per_tick;
+  f32 FrontCollimatorPositionOffset_mm;
+  f32 RearCollimatorPosition_mm_per_tick;
+  f32 RearCollimatorPositionOffset_mm;
+  i32 ScanFeeMode;
+  i32 Capacitance_pf;
+  i32 IntegrationTime_usec;
+  i32 FeeModeGain;
+  i32 eResolution;
+  i32 eAngularSampling_obsolete;
+  f32 Tilt_deg;
+  f32 Swivel_deg;
+  i32 StartAngle;  // in 0.1 deg
+  i32 Height_mm;
+  f32 StartAbsolutBedPosition_mm;
+  f32 FirstDelta;
+  f32 LastDelta;
+  f32 SurviewRotorAngle_deg;
+  i32 nFramesPerScan;
+  i32 nRotationsPerScan;
+  f32 ScanAngle_deg;
+  i32 ScanTime_msec;
+  i32 SingleRotationTime_msec;
+  i32 RotationDirection;  // [CW=1, CCW=-1]
+  f32 BedSpeed_mm_sec;
+  f32 ScanLength_mm;
+  i32 eDirection;  // [IN=-1, OUT=1]
+  i32 nScans;
+  f32 ScanBedIncrement_mm;
+  i32 ScanTimeIncrement_microsec;
+  i32 FilamentCurrent_ma;
+  i32 bDontSuspendReconAfterScanEnd;
+  i32 nFramesPerSeries;
+  i32 eXRayFilterType;
+  i32 GetReadyXrtHeatUnits;
+  i32 GetReadyTime;
+  i32 bDoseModulator;
+  i32 bXTrackingPositionDetector;
+  s64 zXTrackingPositionDetectorTabName;
+  i32 Spare1;
+  s64 DetectorPositionTabName;
+  i32 bUseStartAngle;
+  i32 bAsymmetricStartAngle;
+  i32 aRes[3];
+  f32 DoseFactor;
+  i32 DomDoseSavePercent;
+  i32 DomModulationType;
+  i32 DomMax_ma;
+  f32 ColimationOffset_mm;
+  f32 TotalCollimation_mm;
+  i32 ZDOMStart_mA;
+  i32 nAcquiredEnergyLevels;
+  f32 aFsPosX_du[MAX_FFS];
+  f32 aFsPosZ_du[MAX_FFS];
 
-  i32 raw_data_uid;
-  i32 tube_current_ma;
-  i32 tube_voltage_kv;
-  i32 anode_speed_hz;  // default[50]
-  i32 compensator;     // default[0]
-  i32 fs_size;         // [FS_SS, FS_LL, FS_SL]
-  i32 nffs;            // number of flying focal spots [1, 2]
-  i32 diagnostic_level;
-  i32 scan_mode;
-  i32 manual_auto;
-  i32 trigger;
-  i32 auto_tilt;
-  i32 auto_in_out;
-  i32 used_detector_lines;
-  i32 slice_width_mm;
-  i32 fs_switch_mode;
-  i32 fs_switch_sequence;
-  i32 fs_size_z_mm;
-  i32 wedge_type;
-  i32 temperature_reading;
-  i32 temperature_samples;
-  i32 ncycles;
-  f32 spare1[4];
-  i32 front_blade_error_slices;
-  i32 rear_blade_error_slices;
-  f32 front_collimator_to_center_mm;
-  f32 readr_collimator_to_center_mm;
-  f32 front_collimator_position_mm_per_tick;
-  f32 front_collimator_position_offset_mm;
-  f32 rear_collimator_position_mm_per_tick;
-  f32 rear_collimator_position_offset_mm;
-  i32 scan_fee_mode;
-  i32 capacitance_pf;
-  i32 integration_time_us;
-  i32 fee_mode_gain;
-  i32 resolution;
-  i32 angular_sampling_obsolete;
-  f32 tilt_deg;
-  f32 swivel_deg;
-  i32 start_angle;  // in 0.1 deg
-  i32 height_mm;
-  f32 start_absolut_bed_position_mm;
-  f32 first_delta;
-  f32 last_delta;
-  f32 surview_rotor_angle_deg;
-  i32 nframes_per_scan;
-  i32 nrotations_per_scan;
-  f32 scan_angle_deg;
-  i32 scan_time_msec;
-  i32 single_rotation_time_msec;
-  i32 rotation_direction;  // [CW=1, CCW=-1]
-  f32 bed_speed_mm_sec;
-  f32 scan_length_mm;
-  i32 direction;  // [IN=-1, OUT=1]
-  i32 nscans;
-  f32 scan_bed_increment_mm;
-  i32 scan_time_increment_us;
-  i32 filament_current_ma;
-  i32 dont_suspend_recon_after_scan_end;
-  i32 nframes_per_series;
-  i32 xray_filter_type;
-  i32 get_ready_xrt_heat_units;
-  i32 get_ready_time;
-  i32 dose_modulator;
-  i32 xtracking_position_detector;
-  char xtracking_position_detector_tab_name[64];
-  i32 spare2;
-  char detector_position_tab_name[64];
-  i32 use_start_angle;
-  i32 asymmetric_start_angle;
-  i32 res[3];
-  f32 dose_factor;
-  i32 dom_dose_save_percent;
-  i32 dom_modulation_type;
-  i32 dom_max_ma;
-  f32 colimation_offset_mm;
-  f32 total_collimation_mm;
-  i32 zdom_start_ma;
-  i32 nacquired_energy_levels;
-  f32 fs_pos_x_du[8];
-  f32 fs_pos_z_du[8];
+ public:
+  void visit(this auto& self, auto&& f) {
+    f("RawDataUID", self.RawDataUID);
+    f("TubeCurrent_ma", self.TubeCurrent_ma);
+    f("TubeVVoltage_kv", self.TubeVVoltage_kv);
+    f("AnodeSpeed_Hz", self.AnodeSpeed_Hz);
+    f("bCompensator", self.bCompensator);
+    f("eFsSize", self.eFsSize);
+    f("nFFS", self.nFFS);
+    f("EDiagnosticLevel", self.EDiagnosticLevel);
+    f("eScanMode", self.eScanMode);
+    f("eManualAuto", self.eManualAuto);
+    f("eTrigger", self.eTrigger);
+    f("eAutoTilt", self.eAutoTilt);
+    f("eAutoInOut", self.eAutoInOut);
+    f("nUsedDetectorLines", self.nUsedDetectorLines);
+    f("SliceWidth_mm", self.SliceWidth_mm);
+    f("eFsSwitchMode", self.eFsSwitchMode);
+    f("aFsSwitchSequence", self.aFsSwitchSequence);
+    f("FsSizeX_mm", self.FsSizeX_mm);
+    f("FsSizeZ_mm", self.FsSizeZ_mm);
+    f("eWedgeType", self.eWedgeType);
+    f("bTemperatureReading", self.bTemperatureReading);
+    f("nTemperatureSamples", self.nTemperatureSamples);
+    f("nCycles", self.nCycles);
+    f("aSpare1", self.aSpare1);
+    f("FrontBladeErrorSlices", self.FrontBladeErrorSlices);
+    f("RearBladeErrorSlices", self.RearBladeErrorSlices);
+    f("FrontCollimatorToCenter_mm", self.FrontCollimatorToCenter_mm);
+    f("RearCollimatorToCenter_mm", self.RearCollimatorToCenter_mm);
+    f("FrontCollimatorPosition_mm_per_tick", self.FrontCollimatorPosition_mm_per_tick);
+    f("FrontCollimatorPositionOffset_mm", self.FrontCollimatorPositionOffset_mm);
+    f("RearCollimatorPosition_mm_per_tick", self.RearCollimatorPosition_mm_per_tick);
+    f("RearCollimatorPositionOffset_mm", self.RearCollimatorPositionOffset_mm);
+    f("ScanFeeMode", self.ScanFeeMode);
+    f("Capacitance_pf", self.Capacitance_pf);
+    f("IntegrationTime_usec", self.IntegrationTime_usec);
+    f("FeeModeGain", self.FeeModeGain);
+    f("eResolution", self.eResolution);
+    f("eAngularSampling_obsolete", self.eAngularSampling_obsolete);
+    f("Tilt_deg", self.Tilt_deg);
+    f("Swivel_deg", self.Swivel_deg);
+    f("StartAngle", self.StartAngle);
+    f("Height_mm", self.Height_mm);
+    f("StartAbsolutBedPosition_mm", self.StartAbsolutBedPosition_mm);
+    f("FirstDelta", self.FirstDelta);
+    f("LastDelta", self.LastDelta);
+    f("SurviewRotorAngle_deg", self.SurviewRotorAngle_deg);
+    f("nFramesPerScan", self.nFramesPerScan);
+    f("nRotationsPerScan", self.nRotationsPerScan);
+    f("ScanAngle_deg", self.ScanAngle_deg);
+    f("ScanTime_msec", self.ScanTime_msec);
+    f("SingleRotationTime_msec", self.SingleRotationTime_msec);
+    f("RotationDirection", self.RotationDirection);
+    f("BedSpeed_mm_sec", self.BedSpeed_mm_sec);
+    f("ScanLength_mm", self.ScanLength_mm);
+    f("eDirection", self.eDirection);
+    f("nScans", self.nScans);
+    f("ScanBedIncrement_mm", self.ScanBedIncrement_mm);
+    f("ScanTimeIncrement_microsec", self.ScanTimeIncrement_microsec);
+    f("FilamentCurrent_ma", self.FilamentCurrent_ma);
+    f("bDontSuspendReconAfterScanEnd", self.bDontSuspendReconAfterScanEnd);
+    f("nFramesPerSeries", self.nFramesPerSeries);
+    f("eXRayFilterType", self.eXRayFilterType);
+    f("GetReadyXrtHeatUnits", self.GetReadyXrtHeatUnits);
+    f("GetReadyTime", self.GetReadyTime);
+    f("bDoseModulator", self.bDoseModulator);
+    f("bXTrackingPositionDetector", self.bXTrackingPositionDetector);
+    f("zXTrackingPositionDetectorTabName", self.zXTrackingPositionDetectorTabName);
+    f("Spare1", self.Spare1);
+    f("DetectorPositionTabName", self.DetectorPositionTabName);
+    f("bUseStartAngle", self.bUseStartAngle);
+    f("bAsymmetricStartAngle", self.bAsymmetricStartAngle);
+    f("aRes", self.aRes);
+    f("DoseFactor", self.DoseFactor);
+    f("DomDoseSavePercent", self.DomDoseSavePercent);
+    f("DomModulationType", self.DomModulationType);
+    f("DomMax_ma", self.DomMax_ma);
+    f("ColimationOffset_mm", self.ColimationOffset_mm);
+    f("TotalCollimation_mm", self.TotalCollimation_mm);
+    f("ZDOMStart_mA", self.ZDOMStart_mA);
+    f("nAcquiredEnergyLevels", self.nAcquiredEnergyLevels);
+    f("aFsPosX_du", self.aFsPosX_du);
+    f("aFsPosZ_du", self.aFsPosZ_du);
+  }
+
+  // trait: fmt::Display
+  void fmt(auto& f) const {
+    auto imp = f.debug_struct();
+    this->visit([&](const auto& name, const auto& val) { imp.field(name, val); });
+  }
+
+  void load_head(Slice<const u8> buf) {
+    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+  }
 };
 
 }  // namespace nct::params

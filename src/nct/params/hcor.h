@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nct/math.h"
+#include "nct/params/hdr.h"
 
 namespace nct::params {
 
@@ -8,42 +8,33 @@ namespace nct::params {
 struct HCorTbl {
   static constexpr auto TAG = u16{0x00D9};
 
-  i32 voltage;
-  u32 resolution;
-  i32 nslice;
-  f32 slice_width_mm;
-  i32 nffs;
-  u32 ncoeffs;
-  f32 coeffs[10];
+  i32 Voltage;
+  u32 eResolution;
+  i32 nSlice;
+  f32 sliceWidthMm;
+  i32 nFFS;
+  u32 NCoeffs;
+  f32 aSpare[10];
 
  public:
-  void map(this auto&& self, auto&& f) {
-    f("voltage", self.voltage);
-    f("resolution", self.resolution);
-    f("nslice", self.nslice);
-    f("slice_width_mm", self.slice_width_mm);
-    f("nffs", self.nffs);
-    f("ncoeffs", self.ncoeffs);
-    f("coeffs", Slice{self.coeffs, self.ncoeffs});
+  void visit(this auto&& self, auto&& f) {
+    f("voltage", self.Voltage);
+    f("eResolution", self.eResolution);
+    f("nSlice", self.nSlice);
+    f("sliceWidthMm", self.sliceWidthMm);
+    f("nFFS", self.nFFS);
+    f("nCoeffs", self.NCoeffs);
+    f("aSpare", self.aSpare);
   }
 
-  static auto from_raw(Slice<const u8> buf) -> HCorTbl {
-    auto reader = io::Read{buf};
-
-    auto res = HCorTbl{};
-    res.map([&](const auto& _, auto&& val) {
-      if constexpr (requires { val.as_bytes_mut(); }) {
-        reader.read(val.as_bytes_mut());
-      } else {
-        reader.read_raw(val);
-      }
-    });
-    return res;
-  }
-
+  // trait: fmt::Display
   void fmt(auto& f) const {
     auto imp = f.debug_struct();
-    this->map([&](const auto& name, const auto& val) { imp.field(name, val); });
+    this->visit([&](const auto& name, const auto& val) { imp.field(name, val); });
+  }
+
+  void load_head(Slice<const u8> buf) {
+    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
   }
 };
 

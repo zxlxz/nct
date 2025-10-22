@@ -19,7 +19,7 @@ enum class RampWinType {
   Hann,
 };
 
-void fdk_init_ramplak_cpu(NdSlice<f32, 1> val, RampWinType = RampWinType::SheppLogan);
-void fdk_apply_ramplak_gpu(NdSlice<cf32, 2> dst, NdSlice<f32, 1> val);
+void fdk_init_filter_cpu(NdSlice<f32, 1> val, RampWinType = RampWinType::SheppLogan);
+void fdk_apply_filter_gpu(NdSlice<cf32, 2> dst, NdSlice<f32, 1> val);
 
 }  // namespace nct::recon

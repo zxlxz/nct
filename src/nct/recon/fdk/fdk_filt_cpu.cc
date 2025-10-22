@@ -36,7 +36,7 @@ static auto fdk_ramplak_win(RampWinType win, float r) -> float {
   return 1.0f;
 }
 
-void fdk_init_ramplak_cpu(NdSlice<f32, 1> dst, RampWinType win) {
+void fdk_init_filter_cpu(NdSlice<f32, 1> dst, RampWinType win) {
   static constexpr auto EPSILON = 1e-6f;
 
   const auto half_len = dst._dims.x;

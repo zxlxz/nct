@@ -1,27 +1,38 @@
-#include "sfc/io.h"
 #include "sfc/fs.h"
 #include "sfc/app.h"
 
-#include "nct/mdu/mdu.h"
-
 #include "nct/params/hcor.h"
 #include "nct/params/scan.h"
-#include "nct/params/det_pos.h"
+#include "nct/params/det.h"
+#include "nct/params/air.h"
+#include "nct/params/scatter.h"
 
-
-using namespace sfc;
 using namespace nct;
-using namespace nct::mdu;
+using namespace nct::data;
 using namespace nct::params;
 
 template <class T>
-void dump_elmt(Option<const DcmElmt&> elmt) {
+void dump_tbl(const MduTbl& mdu) {
+  auto elmt = mdu.get({0x01F7, T::TAG});
   if (!elmt) {
+    io::println("load {}: failed", str::type_name<T>());
     return;
   }
 
-  auto val = T::from_raw(elmt->val().as_bytes());
-  io::println("{}: {#}", str::type_name<T>(), val);
+  auto buf = elmt->val.as_bytes();
+
+  auto tbl = T{};
+
+  if constexpr (requires { tbl.load_data(buf); }) {
+    auto hdr = MduHdr{};
+    auto{buf}.read(mem::as_bytes_mut(hdr));
+    tbl.load_head(buf[{hdr.head_offset, hdr.data_offset}]);
+    tbl.load_data(buf[{hdr.data_offset, hdr.data_offset + hdr.data_length}]);
+  } else {
+    buf.read(mem::as_bytes_mut(tbl));
+  }
+
+  io::println("{} = {#?}", str::type_name<T>(), tbl);
 }
 
 void dump_mdu(const MduTbl& mdu) {
@@ -29,102 +40,43 @@ void dump_mdu(const MduTbl& mdu) {
     io::println("{}", elmt);
   }
 
-  dump_elmt<HCorTbl>(mdu.get({0x01F7, 0x00D9}));
-
-  // Scan Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1011})) {}
-
-  // Scanner Technical Data
-  if (auto elmt = mdu.get({0x01F7, 0x1014})) {}
-
-  // Data Description
-  if (auto elmt = mdu.get({0x01F7, 0x1015})) {}
-
-  // Scan Description
-  if (auto elmt = mdu.get({0x01F7, 0x1016})) {}
-
-  // Acq Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1018})) {}
-
-  // Recon Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1019})) {}
-
-  // Prep Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x101B})) {}
-
-  // Image Balance Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x101C})) {}
-
-  // Spiral Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x101F})) {}
-
-  // Spiral Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1027})) {}
-
-  // FilterBP Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1029})) {}
-
-  // Surview Recon Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x102B})) {}
-
-  // Air Calibration Table[Base]
-  if (auto elmt = mdu.get({0x01F7, 0x1050})) {}
-
-  // Wedge Vector
-  if (auto elmt = mdu.get({0x01F7, 0x1058})) {}
-
-  // Bad Detector Table
-  if (auto elmt = mdu.get({0x01F7, 0x1059})) {}
-
-  // Spectrum Correction Table
-  if (auto elmt = mdu.get({0x01F7, 0x105F})) {}
-
-  // Scatter Kernel Table
-  if (auto elmt = mdu.get({0x01F7, 0x1065})) {}
-
-  // Wedge Scatter Table
-  if (auto elmt = mdu.get({0x01F7, 0x1066})) {}
-
-  // Scatter Correction Parameters
-  if (auto elmt = mdu.get({0x01F7, 0x1067})) {}
-
-  // HCOR coeffs
-  if (auto elmt = mdu.get({0x01F7, 0x1075})) {}
-
-  // Channel Cor Table
-  if (auto elmt = mdu.get({0x01F7, 0x107A})) {}
-
-  // Detector Position Table
-  if (auto elmt = mdu.get({0x01F7, 0x108D})) {}
-
-  // Chess Data Structures
-  if (auto elmt = mdu.get({0x01F7, 0x10CC})) {}
+  dump_tbl<HCorTbl>(mdu);
+  dump_tbl<DetPosTbl>(mdu);
+  dump_tbl<AirCorTbl>(mdu);
+  dump_tbl<ScatterTbl>(mdu);
+  dump_tbl<ScanParam>(mdu);
 }
 
 auto load_mdu(fs::Path path) {
   io::println("load '{}'", path);
-  auto mdu = MduTbl::load(path.as_str());
+
+  auto buf = Vec<u8>{};
+  {
+    auto file = fs::File::open(path.as_str()).unwrap();
+    file.read_to_end(buf);
+  }
+
+  auto mdu = MduTbl{};
+  mdu.load(buf.as_slice());
   return mdu;
 }
 
 int main(int argc, const char* argv[]) {
-  auto cmd = app::Cmd{"mdu_unpack"};
-  cmd.add_arg({'i', "input", "Input file path"});
-  cmd.add_arg({'o', "output", "Output file path"});
-  cmd.add_opt({'h', "help", "Print help"});
-  cmd.parse_cmdline(argc, argv);
+  auto cmd = app::Clap{"mdu_unpack"};
+  cmd.add_opt("h:help", "Print help");
+  cmd.add_arg("i:input", "Input file path", "INPUT");
+  if (cmd.parse_cmdline(argc, argv) != 0) {
+    cmd.print_help();
+    return -1;
+  }
 
-  if (argc <= 1 || cmd.get("help")) {
+  if (cmd.get("help")) {
     cmd.print_help();
     return 0;
   }
 
-  const auto mdu_path = cmd.get("input").unwrap_or({});
-  if (mdu_path) {
-    const auto mdu = load_mdu(mdu_path);
-    dump_mdu(mdu);
-    return 0;
-  }
-
+  const auto mdu_path = cmd.get("input").unwrap();
+  const auto mdu = load_mdu(mdu_path);
+  dump_mdu(mdu);
   return 0;
 }

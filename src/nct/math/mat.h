@@ -9,7 +9,7 @@ struct mat;
 
 template <class T>
 struct mat<T, 2> {
-  using col_t = vec<T, 2>;
+  using col_t = nvec<T, 2>;
   col_t c0, c1;
 
  public:
@@ -28,7 +28,7 @@ struct mat<T, 2> {
 
 template <class T>
 struct mat<T, 3> {
-  using col_t = vec<T, 3>;
+  using col_t = nvec<T, 3>;
   col_t c0, c1, c2;
 
  public:
@@ -55,7 +55,7 @@ struct mat<T, 3> {
 
 template <class T>
 struct mat<T, 4> {
-  using col_t = vec<T, 4>;
+  using col_t = nvec<T, 4>;
   col_t c0, c1, c2, c3;
 
  public:

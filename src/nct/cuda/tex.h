@@ -98,7 +98,7 @@ struct LTex<T, 2> {
 
 template <class T, int N>
 class Texture {
-  using dim_t = math::vec<u32, N>;
+  using dim_t = math::nvec<u32, N>;
 
   arr_t _arr = nullptr;
   tex_t _tex = 0;
@@ -163,7 +163,7 @@ class Texture {
 
 template <class T, int N = 2>
 class LTexture {
-  using dim_t = math::vec<u32, N + 1>;
+  using dim_t = math::nvec<u32, N + 1>;
 
   arr_t _arr = nullptr;
   tex_t _tex = 0;

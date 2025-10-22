@@ -83,6 +83,7 @@ class RawBuf {
   void sync_gpu() {
     return _a.sync_gpu(_ptr, _cap * sizeof(T));
   }
+
 };
 
 }  // namespace nct

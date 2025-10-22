@@ -20,7 +20,7 @@ __global__ void _fdk_apply_weight_gpu(NdSlice<f32, 3> views, NdSlice<f32, 2> wei
   }
 }
 
-__global__ void _fdk_apply_ramp_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> window) {
+__global__ void _fdk_apply_filter_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> window) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -35,11 +35,15 @@ __global__ void _fdk_apply_ramp_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> wind
 }
 
 void fdk_apply_weight_gpu(NdSlice<f32, 3> views, NdSlice<f32, 2> weight) {
-  CUDA_RUN(_fdk_apply_weight_gpu, views._dims, dim3(16, 16))(views, weight);
+  const auto trds = dim3{16, 16};
+  const auto blks = cuda::make_blk(views._dims, trds);
+  CUDA_RUN(_fdk_apply_weight_gpu, blks, trds)(views, weight);
 }
 
-void fdk_apply_ramp_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> kernel) {
-  CUDA_RUN(_fdk_apply_ramp_gpu, fft_c._dims, dim3(16, 16))(fft_c, kernel);
+void fdk_apply_filter_gpu(NdSlice<cf32, 2> fft_c, NdSlice<f32, 1> kernel) {
+  const auto trds = dim3{16, 16};
+  const auto blks = cuda::make_blk(fft_c._dims, trds);
+  CUDA_RUN(_fdk_apply_filter_gpu, blks, trds)(fft_c, kernel);
 }
 
 }  // namespace nct::recon

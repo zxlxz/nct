@@ -13,8 +13,8 @@ struct NdSlice;
 
 template <class T>
 struct NdSlice<T, 1> {
-  using dims_t = vec<u32, 1>;
-  using idxs_t = vec<u32, 1>;
+  using dims_t = u32x1;
+  using idxs_t = u32x1;
 
   T* _data = nullptr;
   dims_t _dims = {};
@@ -48,8 +48,8 @@ struct NdSlice<T, 1> {
 
 template <class T>
 struct NdSlice<T, 2> {
-  using dims_t = vec<u32, 2>;
-  using idxs_t = vec<u32, 2>;
+  using dims_t = u32x2;
+  using idxs_t = u32x2;
 
   T* _data = nullptr;
   dims_t _dims = {};
@@ -90,8 +90,8 @@ struct NdSlice<T, 2> {
 
 template <class T>
 struct NdSlice<T, 3> {
-  using dims_t = vec<u32, 3>;
-  using idxs_t = vec<u32, 3>;
+  using dims_t = u32x3;
+  using idxs_t = u32x3;
 
   T* _data = nullptr;
   dims_t _dims = {};
@@ -135,15 +135,18 @@ struct NdSlice<T, 3> {
   }
 };
 
-template <int N>
-static auto make_step(vec<u32, N> dims) -> vec<u32, N> {
-  auto step = vec<u32, N>{1};
-  auto* dims_ptr = &dims.x;
-  auto* step_ptr = &step.x;
-  for (auto i = 1U; i < N; ++i) {
-    step_ptr[i] = step_ptr[i - 1] * dims_ptr[i - 1];
+template <u32 N>
+static auto make_strides(const math::nvec<u32, N>& dims) -> math::nvec<u32, N> {
+  static_assert(N >= 1 && N <= 3);
+
+  auto stride = nvec<u32, N>{1};
+  if constexpr (N >= 2) {
+    stride.y = dims.x;
   }
-  return step;
+  if constexpr (N >= 3) {
+    stride.z = dims.x * dims.y;
+  }
+  return stride;
 }
 
 }  // namespace nct::math
