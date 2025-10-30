@@ -1,111 +1,217 @@
-#include "nct/cuda/fft.h"
 #include <cufft.h>
+
+#include "nct/cuda/fft.h"
+#include <sfc/collections.h>
 
 namespace nct::cuda {
 
-using namespace math;
+namespace detail {
 
 template <class T>
-static auto fft_cast(T* p) -> T* {
-  return p;
-}
-
-static auto fft_cast(math::cf32* p) -> cufftComplex* {
-  return reinterpret_cast<cufftComplex*>(p);
-}
-
-static auto fft_cast(math::cf64* p) -> cufftDoubleComplex* {
-  return reinterpret_cast<cufftDoubleComplex*>(p);
-}
-
-template <class I, class O>
-static constexpr auto fft_type() -> cufftType {
-  if constexpr (__is_class(I) && __is_class(O)) {
-    return sizeof(I) == sizeof(cf32) ? CUFFT_C2C : CUFFT_Z2Z;
-  } else if constexpr (__is_class(O)) {
-    return sizeof(O) == sizeof(cf32) ? CUFFT_R2C : CUFFT_D2Z;
-  } else if constexpr (__is_class(I)) {
-    return sizeof(I) == sizeof(cf32) ? CUFFT_C2R : CUFFT_Z2D;
+static auto fft_cast(T* p) {
+  if constexpr (__is_same(T, c32)) {
+    return reinterpret_cast<cufftComplex*>(p);
+  } else if constexpr (__is_same(T, c64)) {
+    return reinterpret_cast<cufftDoubleComplex*>(p);
+  } else {
+    return p;
   }
-  return CUFFT_C2C;
 }
 
 template <class I, class O>
-static auto fft_exec(int plan, I* in, O* out, int dir) {
-  static constexpr auto type = fft_type<I, O>();
-  if constexpr (type == CUFFT_C2C) {
-    return cufftExecC2C(plan, fft_cast(in), fft_cast(out), dir);
-  } else if constexpr (type == CUFFT_R2C) {
-    return cufftExecR2C(plan, fft_cast(in), fft_cast(out));
-  } else if constexpr (type == CUFFT_C2R) {
-    return cufftExecC2R(plan, fft_cast(in), fft_cast(out));
-  } else if constexpr (type == CUFFT_D2Z) {
-    return cufftExecD2Z(plan, fft_cast(in), fft_cast(out));
-  } else if constexpr (type == CUFFT_Z2D) {
-    return cufftExecZ2D(plan, fft_cast(in), fft_cast(out));
-  } else if constexpr (type == CUFFT_Z2Z) {
-    return cufftExecZ2Z(plan, fft_cast(in), fft_cast(out), dir);
+static auto fft_type() -> cufftType {
+  if constexpr (__is_same(I, f32) && __is_same(O, c32)) {
+    return CUFFT_R2C;
+  } else if constexpr (__is_same(I, c32) && __is_same(O, f32)) {
+    return CUFFT_C2R;
+  } else if constexpr (__is_same(I, c32) && __is_same(O, c32)) {
+    return CUFFT_C2C;
+  } else if constexpr (__is_same(I, f64) && __is_same(O, c64)) {
+    return CUFFT_D2Z;
+  } else if constexpr (__is_same(I, c64) && __is_same(O, f64)) {
+    return CUFFT_Z2D;
+  } else if constexpr (__is_same(I, c64) && __is_same(O, c64)) {
+    return CUFFT_Z2Z;
+  } else {
+    static_assert(false, "nct::cuda::fft_type: Unsupported type combination");
   }
-  return CUFFT_SUCCESS;
 }
 
 template <class I, class O>
-auto FFT<I, O>::plan_1d(const u32 (&dim)[1], u32 batch) -> FFT {
-  static constexpr auto type = fft_type<I, O>();
+static auto fft_plan(const u32 (&dim)[1], u32 batch) -> cufftHandle {
+  static const auto type = fft_type<I, O>();
+
   const auto nx = static_cast<int>(dim[0]);
 
-  auto plan = -1;
+  auto plan = CUFFT_PLAN_NULL;
   if (auto err = cufftPlan1d(&plan, nx, type, batch)) {
     throw cuda::Error{cudaError_t::cudaErrorInvalidValue};
   }
-
-  auto res = FFT{};
-  res._plan = plan;
-  return res;
+  return plan;
 }
 
 template <class I, class O>
-auto FFT<I, O>::plan_2d(const u32 (&dim)[2], u32 batch) -> FFT {
-  static constexpr auto type = fft_type<I, O>();
-  int n[2] = {static_cast<int>(dim[0]), static_cast<int>(dim[1])};
+static auto fft_plan(const u32 (&dim)[2], u32 batch) -> cufftHandle {
+  static const auto type = fft_type<I, O>();
 
-  const auto dist = n[0] * n[1];
-  const auto half = (n[0] / 2 + 1) * n[1];
-  const auto idist = type == CUFFT_C2R || type == CUFFT_Z2D ? half : dist;
-  const auto odist = type == CUFFT_R2C || type == CUFFT_D2Z ? half : dist;
+  const auto nx = static_cast<int>(dim[0]);
+  const auto ny = static_cast<int>(dim[1]);
 
-  auto plan = -1;
-  if (auto err = cufftPlanMany(&plan, 2, n, nullptr, 1, idist, nullptr, 1, odist, type, batch)) {
+  auto plan = CUFFT_PLAN_NULL;
+  if (auto err = cufftPlan2d(&plan, nx, ny, type)) {
     throw cuda::Error{cudaError_t::cudaErrorInvalidValue};
   }
-
-  auto res = FFT{};
-  res._plan = plan;
-  return res;
+  return plan;
 }
 
-template <class I, class O>
-void FFT<I, O>::reset() {
-  if (_plan == -1) {
+static void fft_drop(cufftHandle plan) {
+  if (plan == -1) {
     return;
   }
-  cufftDestroy(_plan);
-  _plan = -1;
+  if (auto err = cufftDestroy(plan)) {
+    throw cuda::Error{cudaError_t::cudaErrorInvalidValue};
+  }
 }
 
 template <class I, class O>
-void FFT<I, O>::operator()(const I* in, O* out, int dir) {
-  if (_plan == -1) {
-    throw cuda::Error{cudaError_t::cudaErrorInvalidValue};
+static void fft_exec(cufftHandle plan, I* in, O* out, int dir) {
+  auto ret = CUFFT_SUCCESS;
+  if constexpr (__is_same(I, f32) && __is_same(O, c32)) {
+    ret = cufftExecR2C(plan, fft_cast(in), fft_cast(out));
+  } else if constexpr (__is_same(I, c32) && __is_same(O, f32)) {
+    ret = cufftExecC2R(plan, fft_cast(in), fft_cast(out));
+  } else if constexpr (__is_same(I, c32) && __is_same(O, c32)) {
+    ret = cufftExecC2C(plan, fft_cast(in), fft_cast(out), dir);
+  } else if constexpr (__is_same(I, f64) && __is_same(O, c64)) {
+    ret = cufftExecD2Z(plan, fft_cast(in), fft_cast(out));
+  } else if constexpr (__is_same(I, c64) && __is_same(O, f64)) {
+    ret = cufftExecZ2D(plan, fft_cast(in), fft_cast(out));
+  } else if constexpr (__is_same(I, c64) && __is_same(O, c64)) {
+    ret = cufftExecZ2Z(plan, fft_cast(in), fft_cast(out), dir);
   }
 
-  if (auto err = fft_exec(_plan, const_cast<I*>(in), out, dir)) {
+  if (ret != CUFFT_SUCCESS) {
     throw cuda::Error{cudaError_t::cudaErrorInvalidValue};
   }
 }
 
-template class FFT<f32, cf32>;
-template class FFT<cf32, f32>;
-template class FFT<cf32, cf32>;
+}  // namespace detail
+
+auto fft_len(u32 n) -> u32 {
+  auto res = 1U;
+  while (res < n) {
+    res *= 2;
+  }
+
+  for (auto x = 1U; x <= n; x *= 2) {
+    for (auto y = 1u; y <= n; y *= 3) {
+      if (x * y >= n) {
+        if (x * y < res) {
+          res = x * y;
+        }
+        break;
+      }
+    }
+  }
+  return res;
+}
+
+template <class I, class O, u32 N>
+auto fft_plan(const u32 (&dims)[N], u32 batch) -> cufftHandle {
+  static_assert(N <= 2, "nct::cuda::fft_plan: N out of range(max 2)");
+
+  struct Key {
+    u32 dims[N];
+    u32 batch;
+
+    auto operator==(const Key& key) const -> bool {
+      if constexpr (N == 1) {
+        return dims[0] == key.dims[0] && batch == key.batch;
+      } else if constexpr (N == 2) {
+        return dims[0] == key.dims[0] && dims[1] == key.dims[1] && batch == key.batch;
+      }
+      return false;
+    }
+  };
+
+  static auto plan_tbl = VecMap<Key, cufftHandle>{};
+
+  const auto key = Key{{dims[0]}, batch};
+  if (auto val = plan_tbl.get(key)) {
+    return *val;
+  }
+
+  const auto plan = detail::fft_plan<I, O>(dims, batch);
+  plan_tbl.insert(key, plan);
+  return plan;
+}
+
+template <u32 N>
+void fft(math::NView<c32, N> in, math::NView<c32, N> out) {
+  for (auto i = 0U; i < N; ++i) {
+    if (in._dims[i] != out._dims[i]) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+  }
+
+  const auto len = in._dims[0];
+  const auto batch = in.size() / len;
+  const auto plan = fft_plan<c32, c32>({len}, batch);
+  detail::fft_exec(plan, in._data, out._data, CUFFT_FORWARD);
+}
+
+template <u32 N>
+void ifft(math::NView<c32, N> in, math::NView<c32, N> out) {
+  for (auto i = 0U; i < N; ++i) {
+    if (in._dims[i] != out._dims[i]) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+  }
+
+  const auto len = in._dims[0];
+  const auto batch = in.size() / len;
+  const auto plan = fft_plan<c32, c32>({len}, batch);
+  detail::fft_exec(plan, in._data, out._data, CUFFT_INVERSE);
+}
+
+template <u32 N>
+void fft(math::NView<f32, N> in, math::NView<c32, N> out) {
+  if (in._dims[0] / 2 + 1 != out._dims[0]) {
+    throw cuda::Error{cudaErrorInvalidValue};
+  }
+  for (auto i = 1U; i < N; ++i) {
+    if (in._dims[i] != out._dims[i]) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+  }
+
+  const auto len = in._dims[0];
+  const auto batch = in.size() / len;
+  const auto plan = fft_plan<f32, c32>({len}, batch);
+  detail::fft_exec(plan, in._data, out._data, CUFFT_FORWARD);
+}
+
+template <u32 N>
+void ifft(math::NView<c32, N> in, math::NView<f32, N> out) {
+  if (in._dims[0] / 2 + 1 != out._dims[0]) {
+    throw cuda::Error{cudaErrorInvalidValue};
+  }
+  for (auto i = 1U; i < N; ++i) {
+    if (in._dims[i] != out._dims[i]) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+  }
+
+  const auto len = in._dims[0];
+  const auto batch = in.size() / len;
+  const auto plan = fft_plan<c32, f32>({len}, batch);
+  detail::fft_exec(plan, in._data, out._data, CUFFT_INVERSE);
+}
+
+template void fft(math::NView<c32, 1> in, math::NView<c32, 1> out);
+template void fft(math::NView<f32, 1> in, math::NView<c32, 1> out);
+
+template void ifft(math::NView<c32, 1> in, math::NView<c32, 1> out);
+template void ifft(math::NView<c32, 1> in, math::NView<f32, 1> out);
 
 }  // namespace nct::cuda

@@ -1,46 +1,25 @@
 #pragma once
 
 #include "nct/cuda/mod.h"
+#include "nct/math.h"
 
 namespace nct::cuda {
 
-enum {
-  FFT_FORWARD = -1,
-  FFT_INVERSE = +1,
-};
+auto fft_len(u32 n) -> u32;
 
-template <class I, class O>
-class FFT {
-  int _plan{-1};
+template <class I, class O, u32 N>
+auto fft_plan(const u32 (&dim)[N], u32 batch = 1) -> int;
 
- public:
-  FFT() noexcept {}
+template <u32 N>
+void fft(NView<c32, N> in, NView<c32, N> out);
 
-  ~FFT() noexcept {
-    this->reset();
-  }
+template <u32 N>
+void ifft(NView<c32, N> in, NView<c32, N> out);
 
-  FFT(const FFT&) = delete;
+template <u32 N>
+void fft(NView<f32, N> in, NView<c32, N> out);
 
-  FFT& operator=(const FFT&) = delete;
-
-  FFT(FFT&& other) noexcept {}
-
-  FFT& operator=(FFT&& other) noexcept {
-    if (this == &other) {
-      return *this;
-    }
-    _plan = other._plan;
-    other._plan = -1;
-    return *this;
-  }
-
-  static auto plan_1d(const u32 (&dim)[1], u32 batch = 1) -> FFT;
-  static auto plan_2d(const u32 (&dim)[2], u32 batch = 1) -> FFT;
-
-  void reset();
-
-  void operator()(const I* in, O* out, int dir = -1);
-};
+template <u32 N>
+void ifft(NView<c32, N> in, NView<f32, N> out);
 
 }  // namespace nct::cuda

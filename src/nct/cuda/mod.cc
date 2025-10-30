@@ -1,6 +1,5 @@
-#include "nct/cuda/mod.h"
-
 #include <cuda_runtime_api.h>
+#include "nct/cuda/mod.h"
 
 namespace nct::cuda {
 

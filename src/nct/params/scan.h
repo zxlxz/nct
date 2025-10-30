@@ -6,6 +6,7 @@ namespace nct::params {
 
 struct ScanParam {
   static constexpr auto TAG = u16{0x1011U};
+
   i32 RawDataUID;
   i32 TubeCurrent_ma;
   i32 TubeVVoltage_kv;
@@ -173,6 +174,77 @@ struct ScanParam {
     f("nAcquiredEnergyLevels", self.nAcquiredEnergyLevels);
     f("aFsPosX_du", self.aFsPosX_du);
     f("aFsPosZ_du", self.aFsPosZ_du);
+  }
+
+  // trait: fmt::Display
+  void fmt(auto& f) const {
+    auto imp = f.debug_struct();
+    this->visit([&](const auto& name, const auto& val) { imp.field(name, val); });
+  }
+
+  void load_head(Slice<const u8> buf) {
+    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+  }
+};
+
+struct ScannerTechnicalData {
+  static constexpr auto TAG = u16{0x1014};
+
+  f32 AbsolutePositionOfZero;
+  i32 unit_htp;
+  f32 FanBeamGrid;
+  f32 ParallelBeamGrid;
+  f32 RadiusFocusPath;        // = SOD
+  f32 DistanceFocusDetector;  // = SDD
+  f32 MeasurementField;
+  f32 NumDetCenterChanX_du;
+  f32 NumSampCenterIndHyb2Pi;
+  f32 AMh;
+  f32 aAMr[2];
+  i32 Ntmax;
+  i32 nPhysicalDetectorLines;
+  i32 ReferenceDetectorLine;
+  i32 ReferenceDetectorLocation;
+  f32 TiltOffsetY_mm;
+  f32 TiltOffsetZ_mm;
+  i32 TubeType;
+  f32 RotationAngleOffset_deg;
+  i32 nPhysicalDetectorLayers;
+  i32 DMSType;
+  f32 AnodeAngle_deg;
+  f32 PhysicalSliceWidth_mm;
+  f32 NumDetCenterChanZ_du;
+  f32 PhysicalDetectorSizeX_mm;
+  f32 PhysicalDetectorSizeZ_mm;
+
+ public:
+  void visit(this auto&& self, auto&& f) {
+    f("AbsolutePositionOfZero", self.AbsolutePositionOfZero);
+    f("unit_htp", self.unit_htp);
+    f("FanBeamGrid", self.FanBeamGrid);
+    f("ParallelBeamGrid", self.ParallelBeamGrid);
+    f("RadiusFocusPath", self.RadiusFocusPath);
+    f("DistanceFocusDetector", self.DistanceFocusDetector);
+    f("MeasurementField", self.MeasurementField);
+    f("NumDetCenterChanX_du", self.NumDetCenterChanX_du);
+    f("NumSampCenterIndHyb2Pi", self.NumSampCenterIndHyb2Pi);
+    f("AMh", self.AMh);
+    f("aAMr", self.aAMr);
+    f("Ntmax", self.Ntmax);
+    f("nPhysicalDetectorLines", self.nPhysicalDetectorLines);
+    f("ReferenceDetectorLine", self.ReferenceDetectorLine);
+    f("ReferenceDetectorLocation", self.ReferenceDetectorLocation);
+    f("TiltOffsetY_mm", self.TiltOffsetY_mm);
+    f("TiltOffsetZ_mm", self.TiltOffsetZ_mm);
+    f("TubeType", self.TubeType);
+    f("RotationAngleOffset_deg", self.RotationAngleOffset_deg);
+    f("nPhysicalDetectorLayers", self.nPhysicalDetectorLayers);
+    f("DMSType", self.DMSType);
+    f("AnodeAngle_deg", self.AnodeAngle_deg);
+    f("PhysicalSliceWidth_mm", self.PhysicalSliceWidth_mm);
+    f("NumDetCenterChanZ_du", self.NumDetCenterChanZ_du);
+    f("PhysicalDetectorSizeX_mm", self.PhysicalDetectorSizeX_mm);
+    f("PhysicalDetectorSizeZ_mm", self.PhysicalDetectorSizeZ_mm);
   }
 
   // trait: fmt::Display

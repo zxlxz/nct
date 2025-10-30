@@ -1,0 +1,93 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+</head>
+
+<body>
+    <div>
+        <script charset="utf-8" src="http://localhost/cdn/plotly-3.1.1.min.js"></script>
+        <div id="plot1" class="plotly-graph-div" style="height: 100%; width: 100%"></div>
+        <script>
+
+            function reshape(src, shape) {
+                if (shape[shape.length - 1] == -1) {
+                    const numel = shape.slice(0, -1).reduce((a, b) => a * b);
+                    shape[shape.length - 1] = src.length / numel;
+                }
+
+                const numel = shape.reduce((a, b) => a * b);
+                if (src.length !== numel) {
+                    throw new Error(`Cannot reshape array of size ${src.length} to shape ${shape}`);
+                }
+
+                if (shape.length == 1) {
+                    return src;
+                }
+
+                if (shape.length == 2) {
+                    const result = [];
+                    for (let i = 0; i < shape[1]; i++) {
+                        const row = src.slice(i * shape[0], (i + 1) * shape[0]);
+                        result.push(row);
+                    }
+                    return result;
+                }
+            }
+
+            async function fetch_bin_f32(url, shape) {
+                const resp = await fetch(url);
+                const buff = await resp.arrayBuffer();
+                const data = new Float32Array(buff);
+                return reshape(data, shape);
+            }
+
+            async function plot_det_pos(divId) {
+                const [x_data, y_data, z_data] = await Promise.all([
+                    fetch_bin_f32('data/detpos_x.bin', [1184, 64]),
+                    fetch_bin_f32('data/detpos_y.bin', [1184, 64]),
+                    fetch_bin_f32('data/detpos_z.bin', [1184, 64])
+                ]);
+
+                const trace_src = {
+                    x: [0],
+                    y: [0],
+                    z: [0],
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    marker: {
+                        size: 5,
+                        color: 'red',
+                        opacity: 0.8
+                    }
+                }
+
+                const trace_det_pos = {
+                    x: x_data,
+                    y: y_data,
+                    z: z_data,
+                    type: 'surface',
+                    colorscale: 'Viridis',
+                    showscale: false,
+                }
+
+                const layout = {
+                    title: 'Detector Position',
+                    autosize: true,
+                    scene: {
+                        xaxis: { range: [-1500, 1500], title: { text: "X(mm)" } },
+                        yaxis: { range: [-1500, 1500], title: { text: "Y(mm)" } },
+                        zaxis: { range: [-50, 50], title: { text: "Z(mm)" } },
+                        aspectratio: { x: 1, y: 1, z: 0.1 },
+                        aspectmode: "manual",
+                    },
+                }
+                Plotly.newPlot("plot1", [trace_src, trace_det_pos], layout);
+            }
+
+            plot_det_pos(plot1)
+        </script>
+    </div>
+</body>
+
+</html>

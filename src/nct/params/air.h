@@ -41,7 +41,7 @@ struct AirCorTbl {
     u32 Spare[7];
   };
 
-  math::NdArray<f32, 3> data = {};  // [nFFS][nSlice][nDetector+2]
+  math::Array<f32, 3> data = {};  // [nFFS][nSlice][nDetector+2]
 
  public:
   void visit(this auto& self, auto&& f) {
@@ -89,7 +89,7 @@ struct AirCorTbl {
   }
 
   void load_data(Slice<const u8> buf) {
-    this->data = math::NdArray<f32, 3>::with_dim({nFFS, nSlices, nDetectors + 2});
+    this->data = math::Array<f32, 3>::with_shape({nFFS, nSlices, nDetectors + 2});
     buf.read(this->data.as_bytes_mut());
   }
 };

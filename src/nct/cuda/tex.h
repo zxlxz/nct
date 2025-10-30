@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nct/math/slice.h"
+#include "nct/math.h"
 #include "nct/cuda/mem.h"
 
 struct cudaArray;
@@ -22,7 +22,7 @@ enum class FiltMode {
 
 namespace detail {
 template <class T>
-auto arr_new(u32 ndim, const u32 dims[], u32 flags) -> arr_t;
+auto arr_new(u32 ndim, const u32 dims[], u32 flags = 0) -> arr_t;
 
 void arr_del(arr_t arr);
 
@@ -33,203 +33,205 @@ auto tex_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t;
 void tex_del(tex_t obj);
 }  // namespace detail
 
-template <class T, int N>
-struct Tex;
-
-template <class T, int N = 2>
-struct LTex;
-
-template <class T>
-struct Tex<T, 2> {
-  using dim_t = math::u32x2;
-  tex_t _tex;
-  dim_t _dim = {0, 0};
+template <class T, u32 N>
+struct Tex {
+  using loc_t = math::vec<f32, N>;
+  tex_t _tex = 0;
+  u32   _dims[N] = {};
 
  public:
-  __device__ auto operator[](math::f32x2 pos) const -> T {
-    auto res = T{0};
+  auto in_bounds(loc_t p) const -> bool = delete;
+  auto operator[](loc_t p) const -> T = delete;
+};
+
+template <class T, u32 N>
+struct LTex {
+  using loc_t = math::vec<f32, N - 1>;
+  tex_t _tex = 0;
+  u32   _dims[N] = {};
+
+ public:
+  auto in_bounds(u32 layer, loc_t p) const -> bool;
+  auto operator()(u32 layer, loc_t p) const -> T;
+};
+
 #ifdef __CUDACC__
-    tex2D(&res, _tex, pos.x, pos.y);
-#endif
+template <class T>
+struct Tex<T, 2> {
+  tex_t _tex = 0;
+  u32   _dims[2] = {};
+
+ public:
+  __device__ auto in_bounds(vec2f p) const -> bool {
+    return p.x >= 0 && p.x < _dims[0] && p.y >= 0 && p.y < _dims[1];
+  }
+
+  __device__ auto operator[](vec2f p) const -> T {
+    auto res = T{0};
+    ::tex2D(&res, _tex, p.x, p.y);
     return res;
   }
 };
 
 template <class T>
 struct Tex<T, 3> {
-  using dim_t = math::u32x3;
   tex_t _tex = 0;
-  dim_t _dim = {0, 0, 0};
+  u32   _dims[3] = {};
 
  public:
-  __device__ auto operator[](math::f32x3 pos) const -> T {
+  __device__ auto in_bounds(vec3f p) const -> bool {
+    return p.x >= 0 && p.x < _dims[0] && p.y >= 0 && p.y < _dims[1] && p.z >= 0 && p.z < _dims[2];
+  }
+
+  __device__ auto operator[](vec3f p) const -> T {
     auto res = T{0};
-#ifdef __CUDACC__
-    tex3D(&res, _tex, pos.x, pos.y, pos.z);
-#endif
+    ::tex3D(&res, _tex, p.x, p.y, p.z);
     return res;
   }
 };
 
 template <class T>
-struct LTex<T, 2> {
-  using dim_t = math::u32x3;
+struct LTex<T, 3> {
   tex_t _tex = 0;
-  dim_t _dim = {0, 0, 0};
+  u32   _dims[3] = {};
 
  public:
-  struct Layer {
-    tex_t _tex = 0;
-    u32 _layer = 0;
-
-    __device__ auto operator[](math::f32x2 pos) const -> T {
-      auto res = T{0};
-#ifdef __CUDACC__
-      tex2DLayered(&res, _tex, pos.x, pos.y, _layer);
-#endif
-      return res;
+  __device__ auto in_bounds(u32 layer, vec2f p) const -> bool {
+    if (layer >= _dims[2]) {
+      return false;
     }
-  };
+    return p.x >= 0 && p.x < _dims[0] && p.y >= 0 && p.y < _dims[1];
+  }
 
-  __device__ auto operator[](u32 layer) const -> Layer {
-    return {_tex, layer};
+  __device__ auto operator()(u32 layer, vec2f p) const -> T {
+    auto res = T{0};
+    ::tex2DLayered(&res, _tex, p.x, p.y, layer);
+    return res;
   }
 };
+#endif
 
-template <class T, int N>
-class Texture {
-  using dim_t = math::nvec<u32, N>;
-
+template <class T, u32 N>
+class TexArr {
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  dim_t _dim = {0};
+  u32   _dims[N] = {};
 
  public:
-  Texture() noexcept = default;
+  TexArr() noexcept = default;
 
-  ~Texture() {
+  ~TexArr() {
     this->reset();
   }
 
-  Texture(const Texture&) = delete;
+  TexArr(const TexArr&) = delete;
 
-  Texture& operator=(const Texture&) = delete;
+  TexArr& operator=(const TexArr&) = delete;
 
-  Texture(Texture&& other) noexcept : _arr{other._arr}, _tex{other._tex}, _dim{other._dim} {
+  TexArr(TexArr&& other) noexcept : _arr{other._arr}, _tex{other._tex} {
     other._arr = nullptr;
     other._tex = 0;
-    other._dim = {0};
   }
 
-  Texture& operator=(Texture&& other) noexcept {
+  TexArr& operator=(TexArr&& other) noexcept {
     if (this == &other) {
       return *this;
     }
     this->reset();
     _arr = other._arr, other._arr = nullptr;
     _tex = other._tex, other._tex = 0;
-    _dim = other._dim, other._dim = {0};
     return *this;
   }
 
   auto operator*() const -> Tex<T, N> {
-    return {_tex, _dim};
+    return {_tex, _dims};
   }
 
-  static auto with_shape(dim_t dim,
+  static auto with_shape(const u32 (&dims)[N],
                          FiltMode filt_mode = FiltMode::Point,
-                         AddrMode addr_mode = AddrMode::Border) -> Texture {
-    auto res = Texture{};
-    res._dim = dim;
-    res._arr = detail::arr_new<T>(N, &dim.x, 0);
+                         AddrMode addr_mode = AddrMode::Border) -> TexArr {
+    auto res = TexArr{};
+    res._arr = detail::arr_new<T>(N, dims);
     res._tex = detail::tex_new(res._arr, filt_mode, addr_mode);
+    for (auto i = 0U; i < N; ++i) {
+      res._dims[i] = dims[i];
+    }
     return res;
   }
 
   void reset() {
-    if (_arr == nullptr) {
-      return;
+    if (_arr != nullptr) {
+      detail::tex_del(_tex), _tex = 0;
+      detail::arr_del(_arr), _arr = nullptr;
     }
-    detail::tex_del(_tex);
-    detail::arr_del(_arr);
-    _tex = 0;
-    _arr = nullptr;
   }
 
-  void set_data(math::NdSlice<T, N> data, stream_t stream = nullptr) {
-    detail::arr_set(_arr, data._data, &data._dims.x, &data._step.x, stream);
+  void set_data(math::NView<T, N> data, stream_t stream = nullptr) {
+    detail::arr_set(_arr, data._data, data._dims, data._step, stream);
   }
 };
 
-template <class T, int N = 2>
-class LTexture {
-  using dim_t = math::nvec<u32, N + 1>;
-
+template <class T, u32 N = 2>
+class LTexArr {
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  dim_t _dim = {0};
 
  public:
-  LTexture() = default;
+  LTexArr() = default;
 
-  ~LTexture() {
+  ~LTexArr() {
     _tex ? detail::tex_del(_tex) : void();
     _arr ? detail::arr_del(_arr) : void();
   }
 
-  LTexture(const LTexture&) = delete;
-  LTexture& operator=(const LTexture&) = delete;
+  LTexArr(const LTexArr&) = delete;
+  LTexArr& operator=(const LTexArr&) = delete;
 
-  LTexture(LTexture&& other) noexcept : _arr{other._arr}, _tex{other._tex}, _dim{other._dim} {
+  LTexArr(LTexArr&& other) noexcept : _arr{other._arr}, _tex{other._tex} {
     other._arr = nullptr;
     other._tex = 0;
-    other._dim = {0};
   }
 
-  LTexture& operator=(LTexture&& other) noexcept {
+  LTexArr& operator=(LTexArr&& other) noexcept {
     if (this == &other) {
       return *this;
     }
     this->reset();
     _arr = other._arr, other._arr = nullptr;
     _tex = other._tex, other._tex = 0;
-    _dim = other._dim, other._dim = {0};
     return *this;
   }
 
   auto operator*() const -> LTex<T, N> {
-    return {_tex, _dim};
+    return {_tex};
   }
 
-  static auto with_dim(dim_t dim,
-                       FiltMode filt_mode = FiltMode::Point,
-                       AddrMode addr_mode = AddrMode::Border) -> LTexture {
-    const auto flags = 1;
-    auto res = LTexture{};
-    res._dim = dim;
-    res._arr = detail::arr_new<T>(N + 1, &dim.x, flags);
+  static auto with_shape(const u32 (&dims)[N],
+                         FiltMode filt_mode = FiltMode::Point,
+                         AddrMode addr_mode = AddrMode::Border) -> LTexArr {
+    auto res = LTexArr{};
+    res._arr = detail::arr_new<T>(N + 1, dims, 1);
     res._tex = detail::tex_new(res._arr, filt_mode, addr_mode);
     return res;
   }
 
-  static auto from_slice(math::NdSlice<T, N + 1> data,
-                         FiltMode filt_mode = FiltMode::Point,
-                         AddrMode addr_mode = AddrMode::Border) -> LTexture {
-    auto res = LTexture::with_dim(data._dims, filt_mode, addr_mode);
+  static auto from_slice(math::NView<T, N> data,
+                         FiltMode          filt_mode = FiltMode::Point,
+                         AddrMode          addr_mode = AddrMode::Border) -> LTexArr {
+    auto res = LTexArr::with_shape(data._dims, filt_mode, addr_mode);
     res.set_data(data);
     return res;
   }
 
   void reset() {
-    if (_arr == nullptr) {
-      return;
+    if (_arr != nullptr) {
+      detail::tex_del(_tex), _tex = 0;
+      detail::arr_del(_arr), _arr = nullptr;
     }
-    detail::tex_del(_tex), _tex = 0;
-    detail::arr_del(_arr), _arr = nullptr;
   }
 
-  void set_data(math::NdSlice<T, N + 1> src, stream_t stream = nullptr) {
-    detail::arr_set(_arr, src._data, N + 1, &src._dims.x, &src._step.x, stream);
+  void set_data(math::NView<T, N> src, stream_t stream = nullptr) {
+    detail::arr_set(_arr, src._data, N, src._dims, src._step, stream);
   }
 };
 

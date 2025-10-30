@@ -5,22 +5,19 @@
 
 namespace nct::correction {
 
-using namespace math;
-using namespace cuda;
-
 struct Coeffs {
   f32 _ptr[8];
   u32 _len;
 
  public:
-  static auto from(NdSlice<f32, 1> tbl) -> Coeffs {
-    if (tbl._dims.x > 8) {
+  static auto from(NView<f32> tbl) -> Coeffs {
+    if (tbl._dims[0] > 8) {
       return {};
     }
 
-    auto res = Coeffs{._len = tbl._dims.x};
+    auto res = Coeffs{._len = tbl._dims[0]};
     for (auto i = 0U; i < res._len; ++i) {
-      res._ptr[i] = tbl[{i}];
+      res._ptr[i] = tbl[i];
     }
     return res;
   }
@@ -37,38 +34,39 @@ struct Coeffs {
   }
 };
 
-__global__ void _det_corr_apply_all_gpu(NdSlice<f32, 3> views,
-                                        NdSlice<f32, 2> dark_tbl,
-                                        NdSlice<f32, 2> air_tbl,
-                                        Coeffs coeffs) {
+__global__ void _det_corr_apply_all_gpu(NView<f32, 3> views,
+                                        NView<f32, 2> dark_tbl,
+                                        NView<f32, 2> air_tbl,
+                                        Coeffs        coeffs) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
+  const auto nu = views._dims[0];
+  const auto nv = views._dims[1];
+  const auto nw = views._dims[2];
 
-  if (iu >= views._dims.x || iv >= views._dims.y) {
+  if (iu >= nu || iv >= nv) {
     return;
   }
 
-  const auto dark = dark_tbl[{iu, iv}];
-  const auto air = air_tbl[{iu, iv}];
+  const auto dark = dark_tbl(iu, iv);
+  const auto air = air_tbl(iu, iv);
 
-  auto ptr = &views[{iu, iv, 0}];
-  for (auto iview = 0U; iview < views._dims.z; ++iview) {
-    const auto raw = ptr[iview * views._step.z];
+  auto ptr = &views(iu, iv, 0);
 
-    const auto correction = raw - dark;
+  for (auto iw = 0U; iw < nw; ++iw) {
+    const auto orig = ptr[iw * views._step[2]];
+    const auto correction = orig - dark;
     const auto norm = correction / (air - dark + 1e-10f);
-
     const auto p_val = -logf(fmaxf(norm, 1e-10f));
     const auto p_corr = coeffs(p_val);
-
-    ptr[iview * views._step.z] = p_corr;
+    ptr[iw * views._step[2]] = p_corr;
   }
 }
 
-void det_corr_apply_all_gpu(NdSlice<f32, 3> views,
-                            NdSlice<f32, 2> dark_tbl,
-                            NdSlice<f32, 2> air_tbl,
-                            NdSlice<f32, 1> coeffs_tbl) {
+void det_corr_apply_all_gpu(NView<f32, 3> views,
+                            NView<f32, 2> dark_tbl,
+                            NView<f32, 2> air_tbl,
+                            NView<f32, 1> coeffs_tbl) {
   const auto coeffs = Coeffs::from(coeffs_tbl);
 
   const auto trds = dim3{8, 8, 1};

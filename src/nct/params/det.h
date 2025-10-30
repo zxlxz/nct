@@ -12,7 +12,7 @@ struct DetPosTbl {
     u32 nFFS;
     u32 nSlices;
     u32 nDetectors;
-    i32 sliceWidthUm;
+    i32 sliceWidth_um;
     u32 nSectors;
     i32 eResolution;
     i32 Voltage;
@@ -25,9 +25,9 @@ struct DetPosTbl {
     f32 aFsPosX_du[MAX_FFS];
     f32 aFsPosZ_du[MAX_FFS];
   };
-  math::NdArray<f32, 3> xpos = {};  // [nFFS][nSlice][nDetector]
-  math::NdArray<f32, 3> ypos = {};  // [nFFS][nSlice][nDetector]
-  math::NdArray<f32, 3> zpos = {};  // [nFFS][nSlice][nDetector]
+  math::Array<f32, 3> xpos = {};  // [nDetector][nSlice][nFFS]
+  math::Array<f32, 3> ypos = {};  // [nDetector][nSlice][nFFS]
+  math::Array<f32, 3> zpos = {};  // [nDetector][nSlice][nFFS]
 
  public:
   void visit(this auto&& self, auto&& f) {
@@ -35,7 +35,7 @@ struct DetPosTbl {
     f("nFFS", self.nFFS);
     f("nSlices", self.nSlices);
     f("nDetectors", self.nDetectors);
-    f("sliceWidthUm", self.sliceWidthUm);
+    f("sliceWidth_um", self.sliceWidth_um);
     f("nSectors", self.nSectors);
     f("eResolution", self.eResolution);
     f("Voltage", self.Voltage);
@@ -60,13 +60,20 @@ struct DetPosTbl {
   }
 
   void load_data(Slice<const u8> buf) {
-    this->xpos = math::NdArray<f32, 3>::with_dim({nFFS, nSlices, nDetectors});
-    this->ypos = math::NdArray<f32, 3>::with_dim({nFFS, nSlices, nDetectors});
-    this->zpos = math::NdArray<f32, 3>::with_dim({nFFS, nSlices, nDetectors});
+    this->xpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
+    this->ypos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
+    this->zpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
     buf.read(xpos.as_bytes_mut());
     buf.read(ypos.as_bytes_mut());
     buf.read(zpos.as_bytes_mut());
   }
+
+  void save_data(auto& out) const {
+    out.write(xpos.as_bytes());
+    out.write(ypos.as_bytes());
+    out.write(zpos.as_bytes());
+  }
+
 };
 
 }  // namespace nct::params

@@ -1,4 +1,23 @@
 #pragma once
 
-#include "nct/core/mod.h"
-#include "nct/core/buf.h"
+#include <math.h>
+#include <new>
+
+#ifdef __CUDACC__
+#include <sfc/core/mem.h>
+#include <sfc/core/ptr.h>
+#else
+#include <sfc/core.h>
+#include <sfc/alloc.h>
+#include <sfc/io/mod.h>
+#endif
+
+#ifndef __CUDACC__
+#define __hd__
+#else
+#define __hd__ __host__ __device__
+#endif
+
+namespace nct {
+using namespace sfc;
+}

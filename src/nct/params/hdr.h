@@ -5,8 +5,6 @@
 
 namespace nct::params {
 
-using namespace sfc;
-
 static constexpr auto MAX_FFS = 8U;
 using s64 = char[64];
 

@@ -5,197 +5,174 @@
 namespace nct::math {
 
 template <class T, u32 N>
-struct nvec;
+struct vec;
 
 template <class T>
-struct alignas(sizeof(T) * 1) nvec<T, 1> {
-  using item_t = T;
-
-  T x;
-
- public:
-  template <class U>
-  __hd__ auto as() const noexcept -> nvec<U, 1> {
-    return {static_cast<U>(x)};
-  }
-
-  __hd__ auto dot(nvec v) const noexcept -> T {
-    return x * v.x;
-  }
-
-  __hd__ auto operator,(T y) const noexcept -> nvec<T, 2> {
-    return {x, y};
-  }
-
-  __hd__ auto operator+(nvec v) const noexcept -> nvec {
-    return {x + v.x};
-  }
-
-  __hd__ auto operator-(nvec v) const noexcept -> nvec {
-    return {x - v.x};
-  }
-
-  __hd__ auto operator*(nvec v) const noexcept -> nvec {
-    return {x * v.x};
-  }
-
-  __hd__ auto operator<(nvec v) const noexcept -> bool {
-    return x < v.x;
-  }
-
-  __hd__ friend auto operator*(T scale, nvec v) noexcept -> nvec {
-    return {scale * v.x};
-  }
-};
-
-template <class T>
-struct alignas(sizeof(T) * 2) nvec<T, 2> {
-  using item_t = T;
-
+struct alignas(sizeof(T) * 2) vec<T, 2> {
+  using arr_t = T[2];
   T x, y;
 
- public:
-  template <class U>
-  __hd__ auto as() const noexcept -> nvec<U, 2> {
-    return {static_cast<U>(x), static_cast<U>(y)};
-  }
-
-  __hd__ auto operator,(T z) const noexcept -> nvec<T, 3> {
-    return {x, y, z};
-  }
-
-  __hd__ auto operator+(nvec v) const noexcept -> nvec {
-    return {x + v.x, y + v.y};
-  }
-
-  __hd__ auto operator-(nvec v) const noexcept -> nvec {
-    return {x - v.x, y - v.y};
-  }
-
-  __hd__ auto operator*(nvec v) const noexcept -> nvec {
-    return {x * v.x, y * v.y};
-  }
-
-  __hd__ auto operator/(nvec v) const noexcept -> nvec {
-    return {x / v.x, y / v.y};
-  }
-
-  __hd__ auto operator<(nvec v) const noexcept -> bool {
-    return x < v.x && y < v.y;
-  }
-
-  __hd__ friend auto operator*(T scale, nvec v) noexcept -> nvec {
-    return {scale * v.x, scale * v.y};
-  }
-
-  __hd__ friend auto operator/(T scale, nvec v) noexcept -> nvec {
-    return {scale / v.x, scale / v.y};
+  operator const arr_t&() const {
+    return reinterpret_cast<const arr_t&>(*this);
   }
 };
 
 template <class T>
-struct alignas(sizeof(T) * 1) nvec<T, 3> {
-  using item_t = T;
+struct alignas(sizeof(T) * 1) vec<T, 3> {
+  using arr_t = T[3];
   T x, y, z;
 
- public:
-  template <class U>
-  __hd__ auto as() const noexcept -> nvec<U, 3> {
-    return {static_cast<U>(x), static_cast<U>(y), static_cast<U>(z)};
-  }
-
-  __hd__ auto operator,(T w) const noexcept -> nvec<T, 4> {
-    return {x, y, z, w};
-  }
-
-  __hd__ auto operator+(nvec v) const noexcept -> nvec {
-    return {x + v.x, y + v.y, z + v.z};
-  }
-
-  __hd__ auto operator-(nvec v) const noexcept -> nvec {
-    return {x - v.x, y - v.y, z - v.z};
-  }
-
-  __hd__ auto operator*(nvec v) const noexcept -> nvec {
-    return {x * v.x, y * v.y, z * v.z};
-  }
-
-  __hd__ auto operator/(nvec v) const noexcept -> nvec {
-    return {x / v.x, y / v.y, z / v.z};
-  }
-
-  __hd__ auto operator<(nvec v) const noexcept -> bool {
-    return x < v.x && y < v.y && z < v.z;
-  }
-
-  __hd__ friend auto operator*(T scale, nvec v) noexcept -> nvec {
-    return {scale * v.x, scale * v.y, scale * v.z};
-  }
-
-  void fmt(auto& f) const {
-    return f.write_fmt("[{}, {}, {}]", x, y, z);
+  operator const arr_t&() const {
+    return reinterpret_cast<const arr_t&>(*this);
   }
 };
 
 template <class T>
-struct alignas(sizeof(T) * 4) nvec<T, 4> {
-  using item_t = T;
+struct alignas(sizeof(T) * 4) vec<T, 4> {
+  using arr_t = T[4];
   T x, y, z, w;
 
- public:
-  __hd__ auto as_vec3() const noexcept -> nvec<T, 3> {
-    return {x, y, z};
-  }
-
-  __hd__ auto dot(nvec v) const noexcept -> T {
-    return x * v.x + y * v.y + z * v.z + w * v.w;
-  }
-
-  __hd__ auto operator+(nvec v) const noexcept -> nvec {
-    return {x + v.x, y + v.y, z + v.z, w + v.w};
-  }
-
-  __hd__ auto operator-(nvec v) const noexcept -> nvec {
-    return {x - v.x, y - v.y, z - v.z, w - v.w};
-  }
-
-  __hd__ auto operator*(nvec v) const noexcept -> nvec {
-    return {x * v.x, y * v.y, z * v.z, w * v.w};
-  }
-
-  __hd__ auto operator<(nvec v) const noexcept -> bool {
-    return x < v.x && y < v.y && z < v.z && w < v.w;
-  }
-
-  __hd__ friend auto operator*(T scale, nvec v) noexcept -> nvec {
-    return {scale * v.x, scale * v.y, scale * v.z, scale * v.w};
+  operator const arr_t&() const {
+    return reinterpret_cast<const arr_t&>(*this);
   }
 };
 
-using f32x1 = nvec<float, 1>;
-using f32x2 = nvec<float, 2>;
-using f32x3 = nvec<float, 3>;
-using f32x4 = nvec<float, 4>;
+using vec2i = vec<i32, 2>;
+using vec2u = vec<u32, 2>;
+using vec2f = vec<f32, 2>;
 
-using i32x1 = nvec<int, 1>;
-using i32x2 = nvec<int, 2>;
-using i32x3 = nvec<int, 3>;
-using i32x4 = nvec<int, 4>;
+using vec3i = vec<i32, 3>;
+using vec3u = vec<u32, 3>;
+using vec3f = vec<f32, 3>;
 
-using u32x1 = nvec<unsigned int, 1>;
-using u32x2 = nvec<unsigned int, 2>;
-using u32x3 = nvec<unsigned int, 3>;
-using u32x4 = nvec<unsigned int, 4>;
-
-__hd__ inline auto len(const nvec<float, 2>& v) noexcept -> float {
-  return sqrtf(v.x * v.x + v.y * v.y);
+template <class T, u32 N>
+__hd__ inline auto operator-(const vec<T, N>& v) noexcept -> vec<T, N> {
+  static_assert(N >= 1 && N <= 3, "-v: N out of range");
+  if constexpr (N == 1) {
+    return {-v.x};
+  } else if constexpr (N == 2) {
+    return {-v.x, -v.y};
+  } else if constexpr (N == 3) {
+    return {-v.x, -v.y, -v.z};
+  }
 }
 
-__hd__ inline auto len(const nvec<float, 3>& v) noexcept -> float {
-  return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+template <class T, u32 N>
+__hd__ inline auto operator*(f32 k, const vec<T, N>& v) noexcept -> vec<f32, N> {
+  static_assert(N >= 1 && N <= 3, "k*v: N out of range");
+  if constexpr (N == 1) {
+    return {k * v.x};
+  } else if constexpr (N == 2) {
+    return {k * v.x, k * v.y};
+  } else if constexpr (N == 3) {
+    return {k * v.x, k * v.y, k * v.z};
+  }
 }
 
-__hd__ inline auto rot(f32 a) noexcept -> f32x2 {
+template <class T, u32 N>
+__hd__ inline auto operator+(const vec<T, N>& a, const vec<T, N>& b) noexcept -> vec<T, N> {
+  static_assert(N >= 1 && N <= 3, "a+b: N out of range");
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  }
+}
+
+template <class T, u32 N>
+__hd__ inline auto operator-(const vec<T, N>& a, const vec<T, N>& b) noexcept -> vec<T, N> {
+  static_assert(N >= 1 && N <= 3, "a-b: N out of range");
+  if constexpr (N == 1) {
+    return {a.x - b.x};
+  } else if constexpr (N == 2) {
+    return {a.x - b.x, a.y - b.y};
+  } else if constexpr (N == 3) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+  }
+}
+
+template <class T, u32 N>
+__hd__ inline auto operator*(const vec<T, N>& a, const vec<T, N>& b) noexcept -> vec<T, N> {
+  static_assert(N >= 1 && N <= 3, "a*b: N out of range");
+  if constexpr (N == 1) {
+    return {a.x * b.x};
+  } else if constexpr (N == 2) {
+    return {a.x * b.x, a.y * b.y};
+  } else if constexpr (N == 3) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+  }
+}
+
+template <class T, u32 N>
+__hd__ inline auto operator/(const vec<T, N>& a, const vec<T, N>& b) noexcept -> vec<T, N> {
+  static_assert(N >= 1 && N <= 3, "a/b: N out of range");
+  if constexpr (N == 1) {
+    return {a.x / b.x};
+  } else if constexpr (N == 2) {
+    return {a.x / b.x, a.y / b.y};
+  } else if constexpr (N == 3) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z};
+  }
+}
+
+template <u32 N>
+__hd__ inline auto operator*(const vec<u32, N>& a, const vec<f32, N>& b) noexcept -> vec<f32, N> {
+  static_assert(N >= 1 && N <= 3, "a*b: N out of range");
+  if constexpr (N == 1) {
+    return {static_cast<f32>(a.x) * b.x};
+  } else if constexpr (N == 2) {
+    return {static_cast<f32>(a.x) * b.x, static_cast<f32>(a.y) * b.y};
+  } else if constexpr (N == 3) {
+    return {static_cast<f32>(a.x) * b.x, static_cast<f32>(a.y) * b.y, static_cast<f32>(a.z) * b.z};
+  }
+}
+
+template <u32 N>
+__hd__ inline auto len(const vec<f32, N>& v) noexcept -> float {
+  static_assert(N >= 1 && N <= 3, "dot: N out of range");
+  if constexpr (N == 1) {
+    return fabsf(v.x);
+  } else if constexpr (N == 2) {
+    return sqrtf(v.x * v.x + v.y * v.y);
+  } else if constexpr (N == 3) {
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+  }
+}
+
+template <u32 N>
+__hd__ inline auto norm(const vec<f32, N>& v) noexcept -> vec<f32, N> {
+  static_assert(N >= 1 && N <= 3, "dot: N out of range");
+  const auto s = len(v);
+  return (1.0f / s) * v;
+}
+
+template <u32 N>
+__hd__ inline auto dot(const vec<f32, N>& a, const vec<f32, N>& b) noexcept -> float {
+  static_assert(N >= 1 && N <= 3, "dot: N out of range");
+  if constexpr (N == 1) {
+    return a.x * b.x;
+  } else if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  }
+}
+
+template <u32 N>
+__hd__ inline auto cross(const vec<f32, N>& a, const vec<f32, N>& b) noexcept -> vec<f32, N> {
+  static_assert(N >= 1 && N <= 3, "cross: N out of range");
+  if constexpr (N == 1) {
+    return {0.0f};
+  } else if constexpr (N == 2) {
+    return a.x * b.y - a.y * b.x;
+  } else if constexpr (N == 3) {
+    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+  }
+}
+
+__hd__ inline auto rot(f32 a) noexcept -> vec2f {
 #ifdef __CUDACC__
   auto c = 0.f;
   auto s = 0.f;
@@ -204,32 +181,6 @@ __hd__ inline auto rot(f32 a) noexcept -> f32x2 {
 #else
   return {cosf(a), sinf(a)};
 #endif
-}
-
-__hd__ inline auto norm(f32x2 v) noexcept -> f32x2 {
-  const auto s = sqrtf(v.x * v.x + v.y * v.y);
-  return {v.x / s, v.y / s};
-}
-
-__hd__ inline auto norm(f32x3 v) noexcept -> f32x3 {
-  const auto s = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
-  return {v.x / s, v.y / s, v.z / s};
-}
-
-__hd__ inline auto dot(f32x2 a, f32x2 b) noexcept -> f32 {
-  return a.x * b.x + a.y * b.y;
-}
-
-__hd__ inline auto dot(f32x3 a, f32x3 b) noexcept -> f32 {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-__hd__ inline auto cross(f32x2 a, f32x2 b) noexcept -> f32 {
-  return a.x * b.y - a.y * b.x;
-}
-
-__hd__ inline auto cross(f32x3 a, f32x3 b) noexcept -> f32x3 {
-  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 
 }  // namespace nct::math
