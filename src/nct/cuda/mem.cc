@@ -6,22 +6,21 @@
 namespace nct::cuda {
 
 auto alloc(MemType type, usize size) -> void* {
+  if (size == 0) {
+    return nullptr;
+  }
+
   auto ptr = static_cast<void*>(nullptr);
+  auto err = cudaSuccess;
+
   switch (type) {
-    case MemType::CPU:
-      if (ptr = ::operator new(size); !ptr) {
-        throw cuda::Error{cudaErrorMemoryAllocation};
-      }
-      break;
-    case MemType::GPU:
-      if (auto err = ::cudaMalloc(&ptr, size)) {
-        throw cuda::Error{err};
-      }
-      break;
-    case MemType::MIXED:
-      if (auto err = ::cudaMallocManaged(&ptr, size)) {
-        throw cuda::Error{err};
-      }
+    case MemType::CPU:   ptr = ::malloc(size); break;
+    case MemType::GPU:   err = ::cudaMalloc(&ptr, size); break;
+    case MemType::MIXED: err = ::cudaMallocManaged(&ptr, size); break;
+  }
+
+  if (ptr == nullptr || err != cudaSuccess) {
+    throw cuda::Error{err == cudaSuccess ? cudaErrorMemoryAllocation : err};
   }
 
   return ptr;
@@ -34,7 +33,7 @@ void dealloc(MemType type, void* ptr) {
 
   switch (type) {
     default:
-    case MemType::CPU:   ::operator delete(ptr); break;
+    case MemType::CPU:   ::free(ptr); break;
     case MemType::GPU:   ::cudaFree(ptr); break;
     case MemType::MIXED: ::cudaFree(ptr); break;
   }
@@ -71,8 +70,9 @@ void copy_bytes(void* dst, const void* src, usize size, stream_t stream) {
     return;
   }
 
-  const auto err = stream ? cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, stream) :
-                            cudaMemcpy(dst, src, size, cudaMemcpyDefault);
+  const auto err = stream ? cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, stream)
+                          : cudaMemcpy(dst, src, size, cudaMemcpyDefault);
+
   if (err) {
     throw cuda::Error{err};
   }

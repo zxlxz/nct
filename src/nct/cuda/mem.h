@@ -90,8 +90,8 @@ class RawBuf {
     if (_ptr != nullptr) {
       cuda::dealloc(MemType::GPU, _ptr);
     }
-    _ptr = other._ptr, other._ptr = nullptr;
-    _cap = other._cap, other._cap = 0;
+    _ptr = mem::take(other._ptr);
+    _cap = mem::take(other._cap);
     return *this;
   }
 

@@ -28,7 +28,6 @@ BinPackParameters: false
 
 # break
 BreakBeforeBinaryOperators: None
-BreakBeforeTernaryOperators : false
 BreakConstructorInitializers: BeforeComma
 PackConstructorInitializers: CurrentLine
 
