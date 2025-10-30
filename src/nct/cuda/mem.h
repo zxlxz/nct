@@ -42,7 +42,7 @@ template <class T, u32 N>
 void copy(math::NView<T, N> src, math::NView<T, N> dst, stream_t stream = nullptr) {
   // check dims
   for (auto i = 0U; i < N; ++i) {
-    if (src._dims[i] != dst._dims[i]) {
+    if (src._dims[i] < dst._dims[i]) {
       throw cuda::Error{1};
     }
   }
@@ -52,9 +52,9 @@ void copy(math::NView<T, N> src, math::NView<T, N> dst, stream_t stream = nullpt
   }
 
   const usize dims[3] = {
-      N > 0 ? src._dims[0] : 1,
-      N > 1 ? src._dims[1] : 1,
-      N > 2 ? src._dims[2] : 1,
+      N > 0 ? dst._dims[0] : 1,
+      N > 1 ? dst._dims[1] : 1,
+      N > 2 ? dst._dims[2] : 1,
   };
   const auto istride = src._step[1] * sizeof(T);
   const auto ostride = dst._step[1] * sizeof(T);
