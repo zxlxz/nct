@@ -4,7 +4,7 @@
 namespace nct::recon {
 
 static auto cone_beam_weight(const Params& p, f64 u, f64 v) -> f64 {
-  const auto h = p.SDD;
+  const auto h = p.SOD;
   return h / sqrt(u * u + v * v + h * h);
 }
 
