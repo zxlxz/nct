@@ -37,7 +37,7 @@ template <class T, u32 N>
 struct Tex {
   using loc_t = math::vec<f32, N>;
   tex_t _tex = 0;
-  u32   _dims[N] = {};
+  u32 _dims[N] = {};
 
  public:
   auto in_bounds(loc_t p) const -> bool = delete;
@@ -48,7 +48,7 @@ template <class T, u32 N>
 struct LTex {
   using loc_t = math::vec<f32, N - 1>;
   tex_t _tex = 0;
-  u32   _dims[N] = {};
+  u32 _dims[N] = {};
 
  public:
   auto in_bounds(u32 layer, loc_t p) const -> bool;
@@ -59,7 +59,7 @@ struct LTex {
 template <class T>
 struct Tex<T, 2> {
   tex_t _tex = 0;
-  u32   _dims[2] = {};
+  u32 _dims[2] = {};
 
  public:
   __device__ auto in_bounds(vec2f p) const -> bool {
@@ -76,7 +76,7 @@ struct Tex<T, 2> {
 template <class T>
 struct Tex<T, 3> {
   tex_t _tex = 0;
-  u32   _dims[3] = {};
+  u32 _dims[3] = {};
 
  public:
   __device__ auto in_bounds(vec3f p) const -> bool {
@@ -93,7 +93,7 @@ struct Tex<T, 3> {
 template <class T>
 struct LTex<T, 3> {
   tex_t _tex = 0;
-  u32   _dims[3] = {};
+  u32 _dims[3] = {};
 
  public:
   __device__ auto in_bounds(u32 layer, vec2f p) const -> bool {
@@ -115,7 +115,7 @@ template <class T, u32 N>
 class TexArr {
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  u32   _dims[N] = {};
+  u32 _dims[N] = {};
 
  public:
   TexArr() noexcept = default;
@@ -156,6 +156,14 @@ class TexArr {
     for (auto i = 0U; i < N; ++i) {
       res._dims[i] = dims[i];
     }
+    return res;
+  }
+
+  static auto from_slice(math::NView<T, N> data,
+                         FiltMode filt_mode = FiltMode::Point,
+                         AddrMode addr_mode = AddrMode::Border) -> TexArr {
+    auto res = TexArr::with_shape(data._dims, filt_mode, addr_mode);
+    res.set_data(data);
     return res;
   }
 
@@ -216,8 +224,8 @@ class LTexArr {
   }
 
   static auto from_slice(math::NView<T, N> data,
-                         FiltMode          filt_mode = FiltMode::Point,
-                         AddrMode          addr_mode = AddrMode::Border) -> LTexArr {
+                         FiltMode filt_mode = FiltMode::Point,
+                         AddrMode addr_mode = AddrMode::Border) -> LTexArr {
     auto res = LTexArr::with_shape(data._dims, filt_mode, addr_mode);
     res.set_data(data);
     return res;

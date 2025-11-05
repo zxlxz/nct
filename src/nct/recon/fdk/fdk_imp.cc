@@ -24,12 +24,19 @@ auto fdk_make_weight(const Params& p) -> Array<f32, 2> {
 }
 
 static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
-  auto res = Array<f32, 1>::with_shape({N}, MemType::MIXED);
+  const auto denom = math::PI * math::PI * T * T;
 
+  auto f = [&](f64 s) {
+    if (s == 0) {
+      return 0.0f;
+    }
+    return -static_cast<f32>(1.0 / (denom * (s * s)));
+  };
+
+  auto res = Array<f32, 1>::with_shape({N}, MemType::MIXED);
   for (u32 i = 0; i < N; i++) {
     const auto s = i < N / 2 ? i : N - i;
-    const auto t = 1.0 / math::PI * (1.0 / (s * s));
-    res[i] = static_cast<f32>(t);
+    res[i] = f(s);
   }
   return res;
 }

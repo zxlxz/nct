@@ -1,6 +1,6 @@
 #include "nct/recon/fdk/fdk.h"
 #include "nct/recon/fdk/fdk_imp.h"
-#include "nct/recon/algos/cone_bp.h"
+#include "nct/recon/algos/cone_.h"
 
 namespace nct::recon {
 

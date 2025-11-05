@@ -9,7 +9,7 @@ ColumnLimit: 120
 BreakBeforeBraces: Attach
 InsertBraces: true
 
-AlignConsecutiveDeclarations: true
+AlignConsecutiveDeclarations: false
 AlignConsecutiveAssignments: false
 AlignConsecutiveMacros: true
 AlignConsecutiveShortCaseStatements:

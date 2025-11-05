@@ -40,7 +40,7 @@ class Array {
   }
 
  public:
-  auto operator*() -> view_t {
+  auto operator*() const -> view_t {
     return _view;
   }
 
