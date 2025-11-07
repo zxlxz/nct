@@ -113,6 +113,8 @@ struct LTex<T, 3> {
 
 template <class T, u32 N>
 class TexArr {
+  static_assert(N >= 1 && N <= 3, "nct::cuda::TexArr: N out of range[1,3]");
+
   arr_t _arr = nullptr;
   tex_t _tex = 0;
   u32 _dims[N] = {};
@@ -121,7 +123,10 @@ class TexArr {
   TexArr() noexcept = default;
 
   ~TexArr() {
-    this->reset();
+    if (_arr != nullptr) {
+      detail::tex_del(_tex);
+      detail::arr_del(_arr);
+    }
   }
 
   TexArr(const TexArr&) = delete;
@@ -137,18 +142,25 @@ class TexArr {
     if (this == &other) {
       return *this;
     }
-    this->reset();
-    _arr = other._arr, other._arr = nullptr;
-    _tex = other._tex, other._tex = 0;
+    auto tmp = mem::move(*this);
+    mem::swap(_arr, other._arr);
+    mem::swap(_tex, other._tex);
+    mem::swap(_dims, other._dims);
     return *this;
   }
 
   auto operator*() const -> Tex<T, N> {
-    return {_tex, _dims};
+    if constexpr (N == 1) {
+      return Tex<T, 1>{_tex, {_dims[0]}};
+    } else if constexpr (N == 2) {
+      return Tex<T, 2>{_tex, {_dims[0], _dims[1]}};
+    } else if constexpr (N == 3) {
+      return Tex<T, 3>{_tex, {_dims[0], _dims[1], _dims[2]}};
+    }
   }
 
   static auto with_shape(const u32 (&dims)[N],
-                         FiltMode filt_mode = FiltMode::Point,
+                         FiltMode filt_mode = FiltMode::Linear,
                          AddrMode addr_mode = AddrMode::Border) -> TexArr {
     auto res = TexArr{};
     res._arr = detail::arr_new<T>(N, dims);
@@ -160,36 +172,33 @@ class TexArr {
   }
 
   static auto from_slice(math::NView<T, N> data,
-                         FiltMode filt_mode = FiltMode::Point,
+                         FiltMode filt_mode = FiltMode::Linear,
                          AddrMode addr_mode = AddrMode::Border) -> TexArr {
     auto res = TexArr::with_shape(data._dims, filt_mode, addr_mode);
     res.set_data(data);
     return res;
   }
 
-  void reset() {
-    if (_arr != nullptr) {
-      detail::tex_del(_tex), _tex = 0;
-      detail::arr_del(_arr), _arr = nullptr;
-    }
-  }
-
   void set_data(math::NView<T, N> data, stream_t stream = nullptr) {
-    detail::arr_set(_arr, data._data, data._dims, data._step, stream);
+    detail::arr_set(_arr, data._data, N, data._dims, data._step, stream);
   }
 };
 
-template <class T, u32 N = 2>
+template <class T, u32 N>
 class LTexArr {
+  static_assert(N >= 2 && N <= 3, "nct::cuda::LTexArr: N out of range[2,3]");
   arr_t _arr = nullptr;
   tex_t _tex = 0;
+  u32 _dims[N] = {0};
 
  public:
   LTexArr() = default;
 
   ~LTexArr() {
-    _tex ? detail::tex_del(_tex) : void();
-    _arr ? detail::arr_del(_arr) : void();
+    if (_arr != nullptr) {
+      detail::tex_del(_tex);
+      detail::arr_del(_arr);
+    }
   }
 
   LTexArr(const LTexArr&) = delete;
@@ -204,18 +213,23 @@ class LTexArr {
     if (this == &other) {
       return *this;
     }
-    this->reset();
-    _arr = other._arr, other._arr = nullptr;
-    _tex = other._tex, other._tex = 0;
+    auto tmp = mem::move(*this);
+    mem::swap(_arr, other._arr);
+    mem::swap(_tex, other._tex);
+    mem::swap(_dims, other._dims);
     return *this;
   }
 
   auto operator*() const -> LTex<T, N> {
-    return {_tex};
+    if constexpr (N == 2) {
+      return {_tex, {_dims[0], _dims[1]}};
+    } else if constexpr (N == 3) {
+      return {_tex, {_dims[0], _dims[1], _dims[2]}};
+    }
   }
 
   static auto with_shape(const u32 (&dims)[N],
-                         FiltMode filt_mode = FiltMode::Point,
+                         FiltMode filt_mode = FiltMode::Linear,
                          AddrMode addr_mode = AddrMode::Border) -> LTexArr {
     auto res = LTexArr{};
     res._arr = detail::arr_new<T>(N + 1, dims, 1);
@@ -224,18 +238,11 @@ class LTexArr {
   }
 
   static auto from_slice(math::NView<T, N> data,
-                         FiltMode filt_mode = FiltMode::Point,
+                         FiltMode filt_mode = FiltMode::Linear,
                          AddrMode addr_mode = AddrMode::Border) -> LTexArr {
     auto res = LTexArr::with_shape(data._dims, filt_mode, addr_mode);
     res.set_data(data);
     return res;
-  }
-
-  void reset() {
-    if (_arr != nullptr) {
-      detail::tex_del(_tex), _tex = 0;
-      detail::arr_del(_arr), _arr = nullptr;
-    }
   }
 
   void set_data(math::NView<T, N> src, stream_t stream = nullptr) {

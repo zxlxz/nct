@@ -54,6 +54,9 @@ struct DcmVR {
   auto is_num() const -> bool;
   auto is_str() const -> bool;
   auto is_bin() const -> bool;
+  auto is_seq() const -> bool;
+
+  auto head_size() const -> u32;
 
   void fmt(auto& f) const {
     f.write_str({_val, 2});
@@ -114,7 +117,7 @@ struct DcmElmt {
   auto decode_data(Slice<const u8> buf) -> usize;
 
   void fmt(auto& f) const {
-    f.write_fmt("{}:{}[{}] {}", tag, vr, vl, val);
+    f.write_fmt("{}:{} {}", tag, vr, val);
   }
 };
 

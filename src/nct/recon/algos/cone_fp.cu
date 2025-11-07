@@ -25,42 +25,84 @@ struct ConeFpGPU {
     return res;
   }
 
-  // convert: voxel index -> world coordinate system
-  __hd__ auto vox_to_world(vec3u vox) const -> vec3f {
-    return vox * vol_pixel - vol_origin;
-  }
-
-  // convert: detector coordinate -> pixel index
-  __hd__ auto det_to_pixel(vec2f loc) const -> vec2f {
-    // loc = ((ij+0.5) - N/2)*pixel
-    // ij = loc/pixel + (N/2-0.5)
-    return loc / det_pixel + det_center;
-  }
-
-  // Ray from source s to voxel P, intersecting detector plane
-  __hd__ auto ray_intersect_det(vec3f S, vec3f P) const -> vec2f {
-    // - rotate -beta around z-axis
-    // - translate to source position s
-    const auto cos_a = S.x / SOD;
-    const auto sin_a = S.y / SOD;
-    const auto px = cos_a * P.x - sin_a * P.y;
-    const auto py = sin_a * P.x + cos_a * P.y;
-    const auto pz = P.z - S.z;
-
-    // s = vec3f{SOD, 0, 0};
-    // p = vec3f{px, py, pz};
-    // r = p - s = {px - SOD, py, pz};
-    // t = (SDD - SOD) / r.x
-    // q = s + t * r = {SDD, t*py, t*pz}
-    const auto r = vec3f{px - SOD, py, pz};
-    const auto t = (SDD - SOD) / r.x;
-    const auto u = -t * py;
-    const auto v = t * pz;
-    return {u, v};
+  // get det position in world coordinate system
+  __hd__ auto det_to_world(vec2u uv, f32 angle) const -> vec3f {
+    return {0, 0, 0};
   }
 };
 
-__global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NView<f32, 3> views) {}
+__global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NView<f32, 3> views) {
+  const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
+  const auto ip = blockIdx.z * blockDim.z + threadIdx.z;
+
+  if (!views.in_bounds(iu, iv, ip)) {
+    return;
+  }
+
+  const auto S = srcs[ip];
+
+  // Detector pixel coordinate in world frame
+  const auto det_loc = p.det_pixel * (vec2f{static_cast<f32>(iu), static_cast<f32>(iv)} - p.det_center);
+
+  // Compute ray direction in world frame
+  // Source is at S = (cos_a*SOD, sin_a*SOD, z_s)
+  // Detector point in detector frame: (SDD, u, v) after rotation
+  // Need to unrotate to get world coordinates
+
+  const auto cos_a = S.x / p.SOD;
+  const auto sin_a = S.y / p.SOD;
+
+  // Detector center in rotated frame: (SDD, 0, 0)
+  // Detector pixel in rotated frame: (SDD, -det_loc.x, det_loc.y)
+  // Convert back to world frame
+  const auto det_x = p.SDD;
+  const auto det_y = -det_loc.x;
+  const auto det_z = det_loc.y;
+
+  // Inverse rotation: world = R^T * rotated
+  const auto det_world_x = cos_a * det_x + sin_a * det_y;
+  const auto det_world_y = -sin_a * det_x + cos_a * det_y;
+  const auto det_world_z = det_z + S.z;
+
+  const auto det_world = vec3f{det_world_x, det_world_y, det_world_z};
+
+  // Ray direction from source to detector
+  const auto ray_diff = det_world - S;
+  const auto ray_len = math::len(ray_diff);
+  const auto ray_dir = (1.0f / ray_len) * ray_diff;
+
+  // Ray marching through volume with fixed step size
+  // For cone beam CT with small cone angle, use XY pixel size (in-plane resolution)
+  // Step size can be tuned for quality vs performance trade-off
+  // Common multipliers: 1.0 (fast), 0.5 (balanced), 0.25 (high quality)
+  const auto min_xy_pixel = ::fminf(p.vol_pixel.x, p.vol_pixel.y);
+  const auto ray_step = 1.0f * min_xy_pixel;  // TODO: make multiplier configurable via Params
+  const auto max_steps = u32(ray_len / ray_step) + 50U;
+
+  f32 accum = 0.0f;
+
+  for (auto step = 0U; step < max_steps; ++step) {
+    const auto world_pos = S + ray_step * static_cast<f32>(step) * ray_dir;
+
+    // Convert world position to volume coordinates
+    const auto vol_pos = (world_pos + p.vol_origin) / p.vol_pixel;
+
+    // Check bounds manually
+    if (vol_pos.x < 0 || vol_pos.x >= static_cast<f32>(vol._dims[0]) ||
+        vol_pos.y < 0 || vol_pos.y >= static_cast<f32>(vol._dims[1]) ||
+        vol_pos.z < 0 || vol_pos.z >= static_cast<f32>(vol._dims[2])) {
+      continue;
+    }
+
+    // Sample volume with texture (hardware interpolation using CUDA Tex3D)
+    f32 val = 0.0f;
+    tex3D(&val, vol._tex, vol_pos.x, vol_pos.y, vol_pos.z);
+    accum += val * ray_step;
+  }
+
+  views(iu, iv, ip) = accum;
+}
 
 static auto make_srcs(const Params& p, u32 nproj) -> Array<vec3f> {
   auto res = Array<vec3f>::with_shape({nproj}, MemType::MIXED);

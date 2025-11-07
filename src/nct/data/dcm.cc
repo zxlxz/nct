@@ -1,4 +1,5 @@
 #include "nct/data/dcm.h"
+#include "dcm.h"
 
 namespace nct::data {
 
@@ -95,8 +96,7 @@ auto DcmVR::is_num() const -> bool {
 
 auto DcmVR::is_str() const -> bool {
   static const DcmVR pats[] = {
-      "AT", "IS", "DA", "DS", "DT", "AE", "AS", "CS", "DA", "TM",
-      "UI", "UR", "LO", "LT", "PN", "SH", "ST", "UT", "UC",
+      "AT", "IS", "DA", "DS", "DT", "AE", "AS", "CS", "DA", "TM", "UI", "UR", "LO", "LT", "PN", "SH", "ST", "UT", "UC",
   };
   for (const auto& pat : pats) {
     if (*this == pat) {
@@ -116,6 +116,17 @@ auto DcmVR::is_bin() const -> bool {
   return false;
 }
 
+auto DcmVR::is_seq() const -> bool {
+  return *this == "SQ";
+}
+
+auto DcmVR::head_size() const -> u32 {
+  if (this->is_bin() || this->is_seq()) {
+    return 12;
+  }
+  return 8;
+}
+
 auto DcmElmt::decode_head(Slice<const u8> buf) -> usize {
   if (buf._len < 8) {
     return 0;
@@ -124,21 +135,29 @@ auto DcmElmt::decode_head(Slice<const u8> buf) -> usize {
   auto reader = DcmDecoder{buf};
   this->tag = reader.read<DcmTag>().unwrap();
   this->vr = reader.read<DcmVR>().unwrap();
-  this->vl = reader.read<u16>().unwrap();
-
-  if (this->vr.is_num() || this->vr.is_str()) {
-    return 8;
+  if (this->tag.as_u32() == 0) {
+    return 0;
   }
 
-  if (this->vr.is_bin()) {
-    if (buf._len < 12) {
-      return 0;
-    }
+  const auto head_size = this->vr.head_size();
+  if (buf.len() < head_size) {
+    return 0;
+  }
+
+  if (head_size == 8) {
+    this->vl = reader.read<u16>().unwrap();
+  }
+
+  if (head_size == 12) {
+    (void)reader.read<u16>();
     this->vl = reader.read<u32>().unwrap();
-    return 12;
   }
 
-  return 0;
+  if (this->vl == 0) {
+    return head_size;
+  }
+
+  return head_size;
 };
 
 auto DcmElmt::decode_data(Slice<const u8> buf) -> usize {
@@ -175,9 +194,6 @@ auto DcmElmt::decode(Slice<const u8> buf) -> usize {
   }
 
   const auto data_size = this->decode_data(buf[{head_size, $}]);
-  if (data_size == 0) {
-    return 0;
-  }
   return head_size + data_size;
 }
 
