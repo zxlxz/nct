@@ -59,7 +59,13 @@ struct DcmVR {
   auto head_size() const -> u32;
 
   void fmt(auto& f) const {
-    f.write_str({_val, 2});
+    char buf[3] = {_val[0], _val[1], 0};
+    for (auto& x : buf) {
+      if (x == 0) {
+        x = '-';
+      }
+    }
+    f.write_str({buf, 2});
   }
 };
 
