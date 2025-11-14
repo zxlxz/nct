@@ -104,3 +104,7 @@ class Array {
 };
 
 }  // namespace nct::math
+
+namespace nct {
+using math::Array;
+}

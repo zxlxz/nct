@@ -12,7 +12,7 @@ struct NView<T, 1> {
   using idxs_t = u32[1];
   using dims_t = u32[1];
 
-  T*  _data = nullptr;
+  T* _data = nullptr;
   u32 _dims[1] = {0};
   u32 _step[1] = {0};
 
@@ -51,7 +51,7 @@ struct NView<T, 2> {
   using dims_t = u32[2];
   using idxs_t = u32[2];
 
-  T*  _data = nullptr;
+  T* _data = nullptr;
   u32 _dims[2] = {0};
   u32 _step[2] = {0};
 
@@ -109,7 +109,7 @@ struct NView<T, 3> {
   using dims_t = u32[3];
   using idxs_t = u32[3];
 
-  T*  _data = nullptr;
+  T* _data = nullptr;
   u32 _dims[3] = {0};
   u32 _step[3] = {0};
 
@@ -171,3 +171,7 @@ static auto ndslice(T* ptr, const u32 (&dims)[N], const u32 (&step)[N]) -> NView
 }
 
 }  // namespace nct::math
+
+namespace nct {
+using math::NView;
+}

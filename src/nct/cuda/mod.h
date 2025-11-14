@@ -80,10 +80,12 @@ static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
 
 }  // namespace nct::cuda
 
-#if defined(__INTELLISENSE__) && !defined(__device__)
+#if !defined(__CUDACC__) && !defined(__device__)
 #define __device__
 #define __global__
+#endif
 
+#if defined(__INTELLISENSE__) && !defined(__device_builtin__)
 struct dim3 {
   unsigned x = 1;
   unsigned y = 1;

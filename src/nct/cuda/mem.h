@@ -2,12 +2,16 @@
 
 #include "nct/cuda/mod.h"
 
+struct cudaArray;
+
 namespace nct::math {
 template <class T, u32 N>
 struct NView;
 }
 
 namespace nct::cuda {
+
+using arr_t = struct ::cudaArray*;
 
 enum class MemType {
   CPU = 0,
@@ -16,10 +20,15 @@ enum class MemType {
 };
 
 auto alloc(MemType type, usize size) -> void*;
+
 auto dealloc(MemType type, void* ptr) -> void;
+
 auto prefetch(MemType type, void* ptr, usize size) -> void;
+
 void fill_bytes(void* ptr, u8 val, usize size, stream_t stream);
+
 void copy_bytes(void* dst, const void* src, usize size, stream_t stream);
+
 void copy_3d(const void* src, void* dst, const usize dims[3], usize istride, usize ostride, stream_t stream = nullptr);
 
 template <class T>
@@ -63,7 +72,7 @@ void copy(math::NView<T, N> src, math::NView<T, N> dst, stream_t stream = nullpt
 
 template <class T>
 class RawBuf {
-  T*    _ptr = nullptr;
+  T* _ptr = nullptr;
   usize _cap = 0;
 
  public:

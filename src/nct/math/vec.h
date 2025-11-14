@@ -184,3 +184,13 @@ __hd__ inline auto rot(f32 a) noexcept -> vec2f {
 }
 
 }  // namespace nct::math
+
+namespace nct {
+using math::vec2i;
+using math::vec2u;
+using math::vec2f;
+
+using math::vec3i;
+using math::vec3u;
+using math::vec3f;
+}  // namespace nct

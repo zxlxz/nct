@@ -5,8 +5,8 @@
 namespace nct::recon {
 
 struct ConeBpGPU {
-  f32   SOD;         // source->iso center distance [mm]
-  f32   SDD;         // source->detector distance [mm]
+  f32 SOD;           // source->iso center distance [mm]
+  f32 SDD;           // source->detector distance [mm]
   vec3f vol_pixel;   // volume pixel [mm]
   vec3f vol_origin;  // volume origin pos: (N/2-0.5)*pixel [mm]
   vec2f det_pixel;   // detector pixel [mm]
@@ -110,7 +110,7 @@ auto cone_bp(const Params& p, NView<f32, 3> views) -> Array<f32, 3> {
   auto gpu_params = ConeBpGPU::from(p);
 
   auto srcs = make_srcs(p, nproj);
-  auto views_tex = LTexArr<f32, 3>::from_slice(views);
+  auto views_tex = cuda::LTexture<f32, 3>::from(views);
   auto vol = Array<f32, 3>::with_shape(p.vol_shape, MemType::GPU);
 
   // run

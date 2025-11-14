@@ -17,3 +17,8 @@ using c32 = complex<f32>;
 using c64 = complex<f64>;
 
 }  // namespace nct::math
+
+namespace nct {
+using math::c32;
+using math::c64;
+}  // namespace nct

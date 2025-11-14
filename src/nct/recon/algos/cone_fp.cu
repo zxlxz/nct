@@ -89,9 +89,8 @@ __global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NV
     const auto vol_pos = (world_pos + p.vol_origin) / p.vol_pixel;
 
     // Check bounds manually
-    if (vol_pos.x < 0 || vol_pos.x >= static_cast<f32>(vol._dims[0]) ||
-        vol_pos.y < 0 || vol_pos.y >= static_cast<f32>(vol._dims[1]) ||
-        vol_pos.z < 0 || vol_pos.z >= static_cast<f32>(vol._dims[2])) {
+    if (vol_pos.x < 0 || vol_pos.x >= static_cast<f32>(vol._dims[0]) || vol_pos.y < 0 ||
+        vol_pos.y >= static_cast<f32>(vol._dims[1]) || vol_pos.z < 0 || vol_pos.z >= static_cast<f32>(vol._dims[2])) {
       continue;
     }
 
@@ -120,7 +119,7 @@ auto cone_fp(const Params& p, NView<f32, 3> vol, u32 nproj) -> Array<f32, 3> {
 
   const auto srcs = make_srcs(p, nproj);
 
-  const auto vol_tex = TexArr<f32, 3>::from_slice(vol, cuda::FiltMode::Linear);
+  const auto vol_tex = cuda::Texture<f32, 3>::from(vol);
 
   const auto views_shape = vec3u{p.det_shape.x, p.det_shape.y, nproj};
   auto views = Array<f32, 3>::with_shape(views_shape, MemType::GPU);

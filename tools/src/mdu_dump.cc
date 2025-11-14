@@ -36,7 +36,7 @@ auto load_mdu(fs::Path path) -> MduTbl {
 int main(int argc, const char* argv[]) {
   auto cmd = app::Clap{"dump_mdu"};
   cmd.add_opt("h:help", "Print help");
-  cmd.add_arg("i:input", "Input file path", "INPUT");
+  cmd.add_arg("i:input", "mdu file path", "INPUT");
 
   cmd.parse_cmdline(argc, argv);
   if (cmd.get("help")) {
