@@ -183,7 +183,7 @@ struct ScanParam {
   }
 
   void load_head(Slice<const u8> buf) {
-    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+    this->visit([&](const auto& name, auto& val) { (void)buf.read(mem::as_bytes_mut(val)); });
   }
 };
 
@@ -254,7 +254,7 @@ struct ScannerTechnicalData {
   }
 
   void load_head(Slice<const u8> buf) {
-    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+    this->visit([&](const auto& name, auto& val) { (void)buf.read(mem::as_bytes_mut(val)); });
   }
 };
 

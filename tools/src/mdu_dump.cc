@@ -23,7 +23,7 @@ auto load_mdu(fs::Path path) -> MduTbl {
   auto buf = Vec<u8>{};
   {
     auto file = fs::File::open(path.as_str()).unwrap();
-    file.read_to_end(buf);
+    (void)file.read_to_end(buf);
   }
 
   auto mdu = MduTbl{};
@@ -35,7 +35,7 @@ auto load_mdu(fs::Path path) -> MduTbl {
 
 int main(int argc, const char* argv[]) {
   auto cmd = app::Clap{"dump_mdu"};
-  cmd.add_opt("h:help", "Print help");
+  cmd.add_flag("h:help", "Print help");
   cmd.add_arg("i:input", "mdu file path", "INPUT");
 
   cmd.parse_cmdline(argc, argv);

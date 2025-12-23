@@ -17,9 +17,8 @@ struct NView<T, 1> {
   u32 _step[1] = {0};
 
  public:
-  static auto from(T* data, const u32 (&dims)[1], const u32 (&step)[1]) -> NView {
-    return {data, {dims[0]}, {step[0]}};
-  }
+  NView() = default;
+  NView(T* data, const dims_t& dims, const idxs_t& step) : _data(data), _dims{dims[0]}, _step{step[0]} {}
 
   auto size() const -> u32 {
     return _dims[0];
@@ -56,9 +55,12 @@ struct NView<T, 2> {
   u32 _step[2] = {0};
 
  public:
-  static auto from(T* data, const u32 (&dims)[2], const u32 (&step)[2]) -> NView {
-    return {data, {dims[0], dims[1]}, {step[0], step[1]}};
-  }
+  NView() = default;
+
+  NView(T* data, const dims_t& dims, const idxs_t& step)
+      : _data(data)
+      , _dims{dims[0], dims[1]}
+      , _step{step[0], step[1]} {}
 
   auto size() const -> u32 {
     return _dims[0] * _dims[1];
@@ -114,9 +116,11 @@ struct NView<T, 3> {
   u32 _step[3] = {0};
 
  public:
-  static auto from(T* data, const u32 (&dims)[3], const u32 (&step)[3]) -> NView {
-    return {data, {dims[0], dims[1], dims[2]}, {step[0], step[1], step[2]}};
-  }
+  NView() = default;
+  NView(T* data, const dims_t& dims, const idxs_t& step)
+      : _data(data)
+      , _dims{dims[0], dims[1], dims[2]}
+      , _step{step[0], step[1], step[2]} {}
 
   __hd__ auto size() const -> u32 {
     return _dims[0] * _dims[1] * _dims[2];
@@ -159,16 +163,6 @@ struct NView<T, 3> {
     }
   }
 };
-
-template <class T, u32 N>
-static auto ndslice(T* ptr, const u32 (&dims)[N], const u32 (&step)[N]) -> NView<T, N> {
-  auto res = NView<T, N>{ptr, {dims[0]}, {1}};
-  for (auto i = 1U; i < N; ++i) {
-    res._dims[i] = dims[i];
-    res._step[i] = res._step[i - 1] * res._dims[i - 1];
-  }
-  return res;
-}
 
 }  // namespace nct::math
 

@@ -7,9 +7,6 @@ namespace nct::cuda {
 
 auto fft_len(u32 n) -> u32;
 
-template <class I, class O, u32 N>
-auto fft_plan(const u32 (&dim)[N], u32 batch = 1) -> int;
-
 template <u32 N>
 void fft(NView<c32, N> in, NView<c32, N> out);
 

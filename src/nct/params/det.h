@@ -56,16 +56,16 @@ struct DetPosTbl {
   }
 
   void load_head(Slice<const u8> buf) {
-    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+    this->visit([&](const auto& name, auto& val) { (void)buf.read(mem::as_bytes_mut(val)); });
   }
 
   void load_data(Slice<const u8> buf) {
     this->xpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
     this->ypos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
     this->zpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
-    buf.read(xpos.as_bytes_mut());
-    buf.read(ypos.as_bytes_mut());
-    buf.read(zpos.as_bytes_mut());
+    (void)buf.read(xpos.as_bytes_mut());
+    (void)buf.read(ypos.as_bytes_mut());
+    (void)buf.read(zpos.as_bytes_mut());
   }
 
   void save_data(auto& out) const {

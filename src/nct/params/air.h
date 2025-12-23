@@ -85,12 +85,12 @@ struct AirCorTbl {
 
   // trait: serde::Deserialize
   void load_head(Slice<const u8> buf) {
-    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+    this->visit([&](const auto& name, auto& val) { (void)buf.read(mem::as_bytes_mut(val)); });
   }
 
   void load_data(Slice<const u8> buf) {
     this->data = math::Array<f32, 3>::with_shape({nFFS, nSlices, nDetectors + 2});
-    buf.read(this->data.as_bytes_mut());
+    (void)buf.read(this->data.as_bytes_mut());
   }
 };
 

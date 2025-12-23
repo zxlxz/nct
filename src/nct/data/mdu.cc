@@ -27,7 +27,7 @@ auto MduTbl::as_slice() const -> Slice<const DcmElmt> {
 }
 
 auto MduTbl::get(DcmTag tag) const -> Option<const DcmElmt&> {
-  for (const auto& elmt : _elmts) {
+  for (const auto& elmt : *_elmts) {
     if (elmt.tag == tag) {
       return elmt;
     }

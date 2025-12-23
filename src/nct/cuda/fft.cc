@@ -97,6 +97,9 @@ static void fft_exec(cufftHandle plan, I* in, O* out, int dir) {
 
 }  // namespace detail
 
+template <u32 N>
+struct PlanInfo {};
+
 auto fft_len(u32 n) -> u32 {
   auto res = 1U;
   while (res < n) {
@@ -116,33 +119,23 @@ auto fft_len(u32 n) -> u32 {
   return res;
 }
 
-template <class I, class O, u32 N>
-auto fft_plan(const u32 (&dims)[N], u32 batch) -> cufftHandle {
-  static_assert(N <= 2, "nct::cuda::fft_plan: N out of range(max 2)");
-
-  struct Key {
-    u32 dims[N];
+template <class I, class O>
+auto fft_plan(const u32 (&dims)[1], u32 batch) -> cufftHandle {
+  struct Item {
+    cufftHandle plan;
+    u32 dims[1];
     u32 batch;
-
-    auto operator==(const Key& key) const -> bool {
-      if constexpr (N == 1) {
-        return dims[0] == key.dims[0] && batch == key.batch;
-      } else if constexpr (N == 2) {
-        return dims[0] == key.dims[0] && dims[1] == key.dims[1] && batch == key.batch;
-      }
-      return false;
-    }
   };
 
-  static auto plan_tbl = VecMap<Key, cufftHandle>{};
-
-  const auto key = Key{{dims[0]}, batch};
-  if (auto val = plan_tbl.get(key)) {
-    return *val;
+  static auto plans = Vec<Item>{};
+  for (const auto& x : plans.as_slice()) {
+    if (x.dims[0] == dims[0] && x.batch == batch) {
+      return x.plan;
+    }
   }
 
   const auto plan = detail::fft_plan<I, O>(dims, batch);
-  plan_tbl.insert(key, plan);
+  plans.push(Item{plan, {dims[0]}, batch});
   return plan;
 }
 

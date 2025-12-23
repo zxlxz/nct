@@ -35,7 +35,7 @@ class Array {
 
     auto res = Array{};
     res._data = data_t::with_capacity(size, {mtype});
-    res._view = view_t::from(res._data.ptr(), dims, step);
+    res._view = view_t{res._data.ptr(), dims, step};
     return res;
   }
 

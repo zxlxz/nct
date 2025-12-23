@@ -154,14 +154,29 @@ struct DMSFoot {
 };
 
 class RawData {
-  u32 _ndet = 0;
-  u32 _nslice = 0;
-  u32 _view_size = 0u;
-  u32 _view_cnt = 0u;
+  usize _ndet = 0;
+  usize _nfan = 0;
+  usize _nview = 0;
+  usize _fan_size = 0;
+  usize _view_size = 0;
   Vec<u8> _data = {};
 
  public:
   static auto load_file(Str path) -> RawData;
+
+  auto view_cnt() const -> usize {
+    return _nview;
+  }
+
+  auto slice_cnt() const -> usize {
+    return _nfan;
+  }
+
+  auto det_cnt() const -> usize {
+    return _ndet;
+  }
+
+  auto get(usize view_idx, usize slice_idx) const -> Slice<const u16>;
 };
 
 }  // namespace nct::data

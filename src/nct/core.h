@@ -9,7 +9,6 @@
 #else
 #include <sfc/core.h>
 #include <sfc/alloc.h>
-#include <sfc/io/mod.h>
 #endif
 
 #ifndef __CUDACC__

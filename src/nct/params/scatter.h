@@ -52,21 +52,21 @@ struct ScatterTbl {
   }
 
   void load_head(Slice<const u8> buf) {
-    this->visit([&](const auto& name, auto& val) { buf.read(mem::as_bytes_mut(val)); });
+    this->visit([&](const auto& name, auto& val) { (void)buf.read(mem::as_bytes_mut(val)); });
   }
 
   void load_data(Slice<const u8> buf) {
     this->scale = math::Array<f32, 1>::with_shape({npOR * nRx * nOA});
-    buf.read(this->scale.as_bytes_mut());
+    (void)buf.read(this->scale.as_bytes_mut());
 
     this->index = math::Array<u16, 1>::with_shape({nKx});
-    buf.read(this->index.as_bytes_mut());
+    (void)buf.read(this->index.as_bytes_mut());
 
     this->weight = math::Array<f32, 2>::with_shape({4, nKx});
-    buf.read(this->weight.as_bytes_mut());
+    (void)buf.read(this->weight.as_bytes_mut());
 
     this->kernel = math::Array<f32, 3>::with_shape({npOR * nRx * nOA, nKz, nKxOnDisk});
-    buf.read(this->kernel.as_bytes_mut());
+    (void)buf.read(this->kernel.as_bytes_mut());
   }
 };
 
