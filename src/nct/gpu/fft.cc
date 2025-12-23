@@ -1,9 +1,9 @@
 #include <cufft.h>
 
-#include "nct/cuda/fft.h"
+#include "nct/gpu/fft.h"
 #include <sfc/collections.h>
 
-namespace nct::cuda {
+namespace nct::gpu {
 
 namespace detail {
 
@@ -33,7 +33,7 @@ static auto fft_type() -> cufftType {
   } else if constexpr (__is_same(I, c64) && __is_same(O, c64)) {
     return CUFFT_Z2Z;
   } else {
-    static_assert(false, "nct::cuda::fft_type: Unsupported type combination");
+    static_assert(false, "nct::gpu::fft_type: Unsupported type combination");
   }
 }
 
@@ -207,4 +207,4 @@ template void fft(math::NView<f32, 1> in, math::NView<c32, 1> out);
 template void ifft(math::NView<c32, 1> in, math::NView<c32, 1> out);
 template void ifft(math::NView<c32, 1> in, math::NView<f32, 1> out);
 
-}  // namespace nct::cuda
+}  // namespace nct::gpu

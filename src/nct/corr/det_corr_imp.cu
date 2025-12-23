@@ -1,9 +1,9 @@
 #pragma once
 
-#include "nct/correction/det_corr_imp.h"
-#include "nct/cuda.h"
+#include "nct/corr/det_corr_imp.h"
+#include "nct/gpu.h"
 
-namespace nct::correction {
+namespace nct::corr {
 
 struct Coeffs {
   f32 _ptr[8];
@@ -55,8 +55,8 @@ __global__ void _det_corr_apply_all_gpu(NView<f32, 3> views,
 
   for (auto iw = 0U; iw < nw; ++iw) {
     const auto orig = ptr[iw * views._step[2]];
-    const auto correction = orig - dark;
-    const auto norm = correction / (air - dark + 1e-10f);
+    const auto corr = orig - dark;
+    const auto norm = corr / (air - dark + 1e-10f);
     const auto p_val = -logf(fmaxf(norm, 1e-10f));
     const auto p_corr = coeffs(p_val);
     ptr[iw * views._step[2]] = p_corr;
@@ -74,4 +74,4 @@ void det_corr_apply_all_gpu(NView<f32, 3> views,
   CUDA_RUN(_det_corr_apply_all_gpu, blks, trds)(views, dark_tbl, air_tbl, coeffs);
 }
 
-}  // namespace nct::correction
+}  // namespace nct::corr

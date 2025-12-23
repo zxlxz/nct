@@ -70,7 +70,7 @@ struct ScatterTbl {
   }
 };
 
-// scatter correction algorithm control parameters
+// scatter corr algorithm control parameters
 struct ScatterACP {
   static constexpr auto TAG = u16{0x1067};
 

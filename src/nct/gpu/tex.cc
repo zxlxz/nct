@@ -1,8 +1,8 @@
 
 #include <cuda_runtime_api.h>
-#include "nct/cuda/tex.h"
+#include "nct/gpu/tex.h"
 
-namespace nct::cuda::detail {
+namespace nct::gpu::detail {
 
 template <class T>
 auto arr_new(u32 ndim, const u32 dims[], u32 flags) -> arr_t {
@@ -127,4 +127,4 @@ void tex_del(tex_t obj) {
   }
 }
 
-}  // namespace nct::cuda::detail
+}  // namespace nct::gpu::detail

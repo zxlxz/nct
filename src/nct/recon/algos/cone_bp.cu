@@ -1,5 +1,5 @@
 #include "nct/math.h"
-#include "nct/cuda.h"
+#include "nct/gpu.h"
 #include "nct/recon/algos/cone_.h"
 
 namespace nct::recon {

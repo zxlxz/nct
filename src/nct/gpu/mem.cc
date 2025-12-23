@@ -1,9 +1,9 @@
 #include <cuda_runtime_api.h>
 #include <channel_descriptor.h>
 
-#include "nct/cuda/mem.h"
+#include "nct/gpu/mem.h"
 
-namespace nct::cuda {
+namespace nct::gpu {
 
 auto alloc(MemType type, usize size) -> void* {
   if (size == 0) {
@@ -100,4 +100,4 @@ void copy_3d(const void* src, void* dst, const usize dims[3], usize istride, usi
   }
 }
 
-}  // namespace nct::cuda
+}  // namespace nct::gpu

@@ -1,7 +1,7 @@
 #include <cuda_runtime_api.h>
-#include "nct/cuda/mod.h"
+#include "nct/gpu/mod.h"
 
-namespace nct::cuda {
+namespace nct::gpu {
 
 const char* Error::what() const noexcept {
   const auto name = cudaGetErrorName(static_cast<cudaError_t>(_code));
@@ -152,4 +152,4 @@ void Stream::wait(const Event& event) {
   }
 }
 
-}  // namespace nct::cuda
+}  // namespace nct::gpu

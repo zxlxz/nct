@@ -1,10 +1,9 @@
 #pragma once
 
-#include "nct/cuda.h"
+#include "nct/gpu.h"
 #include "nct/math.h"
 
-namespace nct::correction {
-
+namespace nct::corr {
 
 class DetCorr {
   Array<f32, 2> _dark_tbl;         // [ndet_u, ndet_v]
@@ -22,4 +21,4 @@ class DetCorr {
   void exec(NView<f32, 3> views);
 };
 
-}  // namespace nct::correction
+}  // namespace nct::corr

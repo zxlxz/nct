@@ -1,16 +1,14 @@
 #pragma once
 
 #include "nct/math/nview.h"
-#include "nct/cuda/mem.h"
+#include "nct/gpu/mem.h"
 
 namespace nct::math {
-
-using MemType = cuda::MemType;
 
 template <class T, u32 N = 1>
 class Array {
   using view_t = NView<T, N>;
-  using data_t = cuda::RawBuf<T>;
+  using data_t = gpu::RawBuf<T>;
 
   data_t _data{};
   view_t _view{};

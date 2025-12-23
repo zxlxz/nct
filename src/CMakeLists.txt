@@ -1,12 +1,15 @@
-find_package(CUDAToolkit REQUIRED)
-enable_language(CUDA)
 
-file(GLOB_RECURSE CC_SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/**.cc")
-file(GLOB_RECURSE CU_SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/**.cu")
-add_library(nct ${CC_SRC} ${CU_SRC})
+include_directories(${CMAKE_CURRENT_LIST_DIR})
 
-target_compile_features(nct PUBLIC cxx_std_23)
-target_compile_features(nct PRIVATE cuda_std_20)
-target_include_directories(nct PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-target_include_directories(nct PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-target_link_libraries(nct sfc CUDA::cudart)
+
+add_subdirectory(nct/data)
+add_subdirectory(nct/math)
+add_subdirectory(nct/corr)
+add_subdirectory(nct/recon)
+add_subdirectory(nct/params)
+
+
+add_library(nct INTERFACE)
+target_link_libraries(nct INTERFACE sfc)
+target_link_libraries(nct INTERFACE nct_data nct_corr nct_recon)
+target_include_directories(nct INTERFACE ${CMAKE_CURRENT_LIST_DIR})

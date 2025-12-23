@@ -1,6 +1,6 @@
-#include "nct/correction/det_corr.h"
+#include "nct/corr/det_corr.h"
 
-namespace nct::correction {
+namespace nct::corr {
 
 DetCorr::DetCorr() noexcept {}
 
@@ -20,4 +20,4 @@ void DetCorr::set_beam_harden_tbl(Array<f32, 1> tbl) {
 
 void DetCorr::exec(NView<f32, 3> views) {}
 
-}  // namespace nct::correction
+}  // namespace nct::corr

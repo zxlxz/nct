@@ -5,7 +5,7 @@
 struct CUstream_st;
 struct CUevent_st;
 
-namespace nct::cuda {
+namespace nct::gpu {
 
 using event_t = CUevent_st*;
 using stream_t = CUstream_st*;
@@ -66,7 +66,7 @@ class Stream {
 
 template <u32 N, class dim3>
 static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
-  static_assert(N <= 3, "nct::cuda::make_blk: N out of range(max 3)");
+  static_assert(N <= 3, "nct::gpu::make_blk: N out of range(max 3)");
   auto res = dim3{1U, 1U, 1U};
   if constexpr (N > 0) {
     res.x = (dim[0] + trd.x - 1) / trd.x;
@@ -78,7 +78,7 @@ static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
   return res;
 }
 
-}  // namespace nct::cuda
+}  // namespace nct::gpu
 
 #if !defined(__CUDACC__) && !defined(__device__)
 #define __device__

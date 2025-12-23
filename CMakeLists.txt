@@ -1,6 +1,5 @@
 
 cmake_minimum_required(VERSION 3.21)
-
 project(nct)
 
 add_subdirectory("../sfc" "${CMAKE_BINARY_DIR}/sfc")

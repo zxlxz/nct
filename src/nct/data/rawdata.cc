@@ -19,7 +19,7 @@ auto RawData::load_file(Str path) -> RawData {
   res._nview = data.len() / view_size;
   res._fan_size = fan_size;
   res._view_size = view_size;
-  res._data = std::move(data);
+  res._data = mem::move(data);
 
   return res;
 }
