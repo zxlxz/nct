@@ -64,17 +64,10 @@ class Stream {
   void wait(const Event& event);
 };
 
-#if defined(__INTELLISENSE__) || !defined(__CUDACC__)
-struct dim3 {
-  unsigned x = 1;
-  unsigned y = 1;
-  unsigned z = 1;
-};
-static const auto blockIdx = dim3{1, 1, 1};
-static const auto threadIdx = dim3{1, 1, 1};
-static const auto blockDim = dim3{1, 1, 1};
-static const auto gridDim = dim3{1, 1, 1};
-#endif
+static void conf_exec(const auto& blks, const auto& trds) {
+  (void)blks;
+  (void)trds;
+}
 
 template <u32 N, class dim3>
 static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
@@ -96,15 +89,22 @@ static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
 #define __device__
 #define __global__
 namespace nct {
-using cuda::dim3;
-using cuda::blockIdx;
-using cuda::threadIdx;
-using cuda::blockDim;
+struct dim3 {
+  unsigned x = 1;
+  unsigned y = 1;
+  unsigned z = 1;
+};
+static const auto blockIdx = dim3{1, 1, 1};
+static const auto threadIdx = dim3{1, 1, 1};
+static const auto blockDim = dim3{1, 1, 1};
+static const auto gridDim = dim3{1, 1, 1};
 }  // namespace nct
 #endif
 
 #ifndef __CUDACC__
-#define CUDA_RUN(f, ...) f
+#define CUDA_RUN(f, ...)        \
+  cuda::conf_exec(__VA_ARGS__); \
+  f
 #else
 #define CUDA_RUN(f, ...) f<<<__VA_ARGS__>>>
 #endif
