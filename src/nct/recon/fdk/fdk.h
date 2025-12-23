@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nct/gpu.h"
+#include "nct/cuda.h"
 #include "nct/math.h"
 #include "nct/recon/params.h"
 

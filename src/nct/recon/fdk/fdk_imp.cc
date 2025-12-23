@@ -1,5 +1,5 @@
 #include "fdk_imp.h"
-#include "nct/gpu/fft.h"
+#include "nct/cuda/fft.h"
 
 namespace nct::recon {
 
@@ -42,13 +42,13 @@ static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
 }
 
 auto fdk_make_filter(const Params& p) -> Array<f32, 1> {
-  const auto N = gpu::fft_len(p.det_shape.x * 2);
+  const auto N = cuda::fft_len(p.det_shape.x * 2);
   const auto H = N / 2 + 1;
   const auto T = p.det_pixel.x;
 
   auto h_data = ramp_impulse_response(N, T);
   auto h_ramp = Array<c32, 1>::with_shape({H}, MemType::MIXED);
-  gpu::fft(*h_data, *h_ramp);
+  cuda::fft(*h_data, *h_ramp);
 
   auto h_real = Array<f32, 1>::with_shape({H}, MemType::MIXED);
   for (auto i = 0u; i < H; ++i) {
@@ -75,12 +75,12 @@ void fdk_apply_filter(NView<f32, 3> views, NView<f32, 1> filter) {
 
   for (auto i_proj = 0U; i_proj < n_proj; ++i_proj) {
     auto view = views.slice_at<2>(i_proj);
-    gpu::zero(pad_view);
-    gpu::copy(view, pad_view);
-    gpu::fft(pad_view, fft_view);
+    math::zero(pad_view);
+    math::copy(view, pad_view);
+    cuda::fft(pad_view, fft_view);
     fdk_mul_filter(fft_view, filter);
-    gpu::ifft(fft_view, pad_view);
-    gpu::copy(pad_view, view);
+    cuda::ifft(fft_view, pad_view);
+    math::copy(pad_view, view);
   }
 }
 

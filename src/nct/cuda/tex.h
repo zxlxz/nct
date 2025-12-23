@@ -1,11 +1,11 @@
 #pragma once
 
 #include "nct/math.h"
-#include "nct/gpu/mem.h"
+#include "nct/cuda/mem.h"
 
 struct cudaArray;
 
-namespace nct::gpu {
+namespace nct::cuda {
 
 using arr_t = struct ::cudaArray*;
 using tex_t = unsigned long long;
@@ -226,9 +226,9 @@ class LTexture {
   }
 };
 
-}  // namespace nct::gpu
+}  // namespace nct::cuda
 
 namespace nct {
-using gpu::Tex;
-using gpu::LTex;
+using cuda::Tex;
+using cuda::LTex;
 }  // namespace nct

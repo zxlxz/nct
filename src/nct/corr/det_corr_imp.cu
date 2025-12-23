@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nct/corr/det_corr_imp.h"
-#include "nct/gpu.h"
+#include "nct/cuda.h"
 
 namespace nct::corr {
 

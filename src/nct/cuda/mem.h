@@ -1,22 +1,26 @@
 #pragma once
 
-#include "nct/gpu/mod.h"
+#include "nct/core.h"
 
 struct cudaArray;
+struct CUstream_st;
 
-namespace nct::math {
-template <class T, u32 N>
-struct NView;
-}
-
-namespace nct::gpu {
+namespace nct::cuda {
 
 using arr_t = struct ::cudaArray*;
+using stream_t = CUstream_st*;
 
 enum class MemType {
   CPU = 0,
   GPU = 1,
   MIXED = 2,
+};
+
+struct Ptr3D {
+  void* ptr = nullptr;
+  u32 size = 1;
+  u32 dims[3] = {0, 0, 0};
+  u32 step[3] = {0, 0, 0};
 };
 
 auto alloc(MemType type, usize size) -> void*;
@@ -29,45 +33,16 @@ void fill_bytes(void* ptr, u8 val, usize size, stream_t stream);
 
 void copy_bytes(void* dst, const void* src, usize size, stream_t stream);
 
-void copy_3d(const void* src, void* dst, const usize dims[3], usize istride, usize ostride, stream_t stream = nullptr);
+void copy_3d(Ptr3D src, Ptr3D dst, stream_t stream = nullptr);
 
 template <class T>
 void zero(T* buff, usize size, stream_t stream = nullptr) {
-  gpu::fill_bytes(buff, 0, size * sizeof(T), stream);
-}
-
-template <class T, u32 N>
-void zero(math::NView<T, N> view, stream_t stream = nullptr) {
-  const auto size = view.size();
-  gpu::fill_bytes(view._data, 0, size * sizeof(T), stream);
+  cuda::fill_bytes(buff, 0, size * sizeof(T), stream);
 }
 
 template <class T>
 void copy(const T* src, T* dst, usize size, stream_t stream = nullptr) {
-  gpu::copy_bytes(dst, src, size * sizeof(T), stream);
-}
-
-template <class T, u32 N>
-void copy(math::NView<T, N> src, math::NView<T, N> dst, stream_t stream = nullptr) {
-  // check dims
-  for (auto i = 0U; i < N; ++i) {
-    if (src._dims[i] < dst._dims[i]) {
-      throw gpu::Error{1};
-    }
-  }
-  // check step
-  if (src._step[0] != 1 || dst._step[0] != 1) {
-    throw gpu::Error{1};
-  }
-
-  const usize dims[3] = {
-      N > 0 ? dst._dims[0] : 1,
-      N > 1 ? dst._dims[1] : 1,
-      N > 2 ? dst._dims[2] : 1,
-  };
-  const auto istride = src._step[1] * sizeof(T);
-  const auto ostride = dst._step[1] * sizeof(T);
-  gpu::copy_3d(src._data, dst._data, dims, istride, ostride, stream);
+  cuda::copy_bytes(dst, src, size * sizeof(T), stream);
 }
 
 template <class T>
@@ -80,7 +55,7 @@ class RawBuf {
 
   ~RawBuf() noexcept {
     if (_ptr != nullptr) {
-      gpu::dealloc(MemType::GPU, _ptr);
+      cuda::dealloc(MemType::GPU, _ptr);
     }
   }
 
@@ -97,7 +72,7 @@ class RawBuf {
       return *this;
     }
     if (_ptr != nullptr) {
-      gpu::dealloc(MemType::GPU, _ptr);
+      cuda::dealloc(MemType::GPU, _ptr);
     }
     _ptr = mem::take(other._ptr);
     _cap = mem::take(other._cap);
@@ -106,7 +81,7 @@ class RawBuf {
 
   static auto with_capacity(usize capacity, MemType mtype = {}) -> RawBuf<T> {
     auto res = RawBuf<T>{};
-    res._ptr = static_cast<T*>(gpu::alloc(mtype, capacity * sizeof(T)));
+    res._ptr = static_cast<T*>(cuda::alloc(mtype, capacity * sizeof(T)));
     res._cap = capacity;
     return res;
   }
@@ -120,11 +95,11 @@ class RawBuf {
   }
 
   void sync_cpu() {
-    gpu::prefetch(MemType::CPU, _ptr, _cap * sizeof(T));
+    cuda::prefetch(MemType::CPU, _ptr, _cap * sizeof(T));
   }
 
   void sync_gpu() {
-    gpu::prefetch(MemType::GPU, _ptr, _cap * sizeof(T));
+    cuda::prefetch(MemType::GPU, _ptr, _cap * sizeof(T));
   }
 
 #ifndef __CUDACC__
@@ -138,9 +113,9 @@ class RawBuf {
 #endif
 };
 
-}  // namespace nct::gpu
+}  // namespace nct::cuda
 
 namespace nct {
-using gpu::MemType;
-using gpu::RawBuf;
+using cuda::MemType;
+using cuda::RawBuf;
 }  // namespace nct

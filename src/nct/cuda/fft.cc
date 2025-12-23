@@ -1,9 +1,9 @@
 #include <cufft.h>
 
-#include "nct/gpu/fft.h"
+#include "nct/cuda/fft.h"
 #include <sfc/collections.h>
 
-namespace nct::gpu {
+namespace nct::cuda {
 
 namespace detail {
 
@@ -33,7 +33,7 @@ static auto fft_type() -> cufftType {
   } else if constexpr (__is_same(I, c64) && __is_same(O, c64)) {
     return CUFFT_Z2Z;
   } else {
-    static_assert(false, "nct::gpu::fft_type: Unsupported type combination");
+    static_assert(false, "nct::cuda::fft_type: Unsupported type combination");
   }
 }
 
@@ -148,7 +148,7 @@ void fft(math::NView<c32, N> in, math::NView<c32, N> out) {
   }
 
   const auto len = in._dims[0];
-  const auto batch = in.size() / len;
+  const auto batch = in.numel() / len;
   const auto plan = fft_plan<c32, c32>({len}, batch);
   detail::fft_exec(plan, in._data, out._data, CUFFT_FORWARD);
 }
@@ -162,7 +162,7 @@ void ifft(math::NView<c32, N> in, math::NView<c32, N> out) {
   }
 
   const auto len = in._dims[0];
-  const auto batch = in.size() / len;
+  const auto batch = in.numel() / len;
   const auto plan = fft_plan<c32, c32>({len}, batch);
   detail::fft_exec(plan, in._data, out._data, CUFFT_INVERSE);
 }
@@ -179,7 +179,7 @@ void fft(math::NView<f32, N> in, math::NView<c32, N> out) {
   }
 
   const auto len = in._dims[0];
-  const auto batch = in.size() / len;
+  const auto batch = in.numel() / len;
   const auto plan = fft_plan<f32, c32>({len}, batch);
   detail::fft_exec(plan, in._data, out._data, CUFFT_FORWARD);
 }
@@ -196,7 +196,7 @@ void ifft(math::NView<c32, N> in, math::NView<f32, N> out) {
   }
 
   const auto len = in._dims[0];
-  const auto batch = in.size() / len;
+  const auto batch = in.numel() / len;
   const auto plan = fft_plan<c32, f32>({len}, batch);
   detail::fft_exec(plan, in._data, out._data, CUFFT_INVERSE);
 }
@@ -207,4 +207,4 @@ template void fft(math::NView<f32, 1> in, math::NView<c32, 1> out);
 template void ifft(math::NView<c32, 1> in, math::NView<c32, 1> out);
 template void ifft(math::NView<c32, 1> in, math::NView<f32, 1> out);
 
-}  // namespace nct::gpu
+}  // namespace nct::cuda

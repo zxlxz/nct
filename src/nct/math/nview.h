@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nct/math/mod.h"
+#include "nct/cuda/mem.h"
 
 namespace nct::math {
 
@@ -9,6 +10,7 @@ struct NView;
 
 template <class T>
 struct NView<T, 1> {
+  using data_t = T;
   using idxs_t = u32[1];
   using dims_t = u32[1];
 
@@ -20,7 +22,7 @@ struct NView<T, 1> {
   NView() = default;
   NView(T* data, const dims_t& dims, const idxs_t& step) : _data(data), _dims{dims[0]}, _step{step[0]} {}
 
-  auto size() const -> u32 {
+  auto numel() const -> u32 {
     return _dims[0];
   }
 
@@ -47,6 +49,7 @@ struct NView<T, 1> {
 
 template <class T>
 struct NView<T, 2> {
+  using data_t = T;
   using dims_t = u32[2];
   using idxs_t = u32[2];
 
@@ -62,7 +65,7 @@ struct NView<T, 2> {
       , _dims{dims[0], dims[1]}
       , _step{step[0], step[1]} {}
 
-  auto size() const -> u32 {
+  auto numel() const -> u32 {
     return _dims[0] * _dims[1];
   }
 
@@ -108,6 +111,7 @@ struct NView<T, 2> {
 
 template <class T>
 struct NView<T, 3> {
+  using data_t = T;
   using dims_t = u32[3];
   using idxs_t = u32[3];
 
@@ -122,7 +126,7 @@ struct NView<T, 3> {
       , _dims{dims[0], dims[1], dims[2]}
       , _step{step[0], step[1], step[2]} {}
 
-  __hd__ auto size() const -> u32 {
+  __hd__ auto numel() const -> u32 {
     return _dims[0] * _dims[1] * _dims[2];
   }
 
@@ -163,6 +167,30 @@ struct NView<T, 3> {
     }
   }
 };
+
+template <class T, u32 N>
+void zero(NView<T, N> view, cuda::stream_t stream = nullptr) {
+  const auto numel = view.numel();
+  cuda::fill_bytes(view._data, 0, numel * sizeof(T), stream);
+}
+
+template <class T, u32 N>
+void copy(NView<T, N> src, NView<T, N> dst, cuda::stream_t stream = nullptr) {
+  const auto src_3d = cuda::Ptr3D{
+      .ptr = src._data,
+      .size = sizeof(T),
+      .dims = {src._dims[0], N > 1 ? src._dims[1] : 1, N > 2 ? src._dims[2] : 1},
+      .step = {src._step[0], N > 1 ? src._step[1] : 0, N > 2 ? src._step[2] : 0},
+  };
+  const auto dst_3d = cuda::Ptr3D{
+      .ptr = dst._data,
+      .size = sizeof(T),
+      .dims = {dst._dims[0], N > 1 ? dst._dims[1] : 1, N > 2 ? dst._dims[2] : 1},
+      .step = {dst._step[0], N > 1 ? dst._step[1] : 0, N > 2 ? dst._step[2] : 0},
+  };
+
+  cuda::copy_3d(src_3d, dst_3d, stream);
+}
 
 }  // namespace nct::math
 

@@ -1,9 +1,9 @@
 #include <cuda_runtime_api.h>
 #include <channel_descriptor.h>
 
-#include "nct/gpu/mem.h"
+#include "nct/cuda/mem.h"
 
-namespace nct::gpu {
+namespace nct::cuda {
 
 auto alloc(MemType type, usize size) -> void* {
   if (size == 0) {
@@ -78,26 +78,50 @@ void copy_bytes(void* dst, const void* src, usize size, stream_t stream) {
   }
 }
 
-void copy_3d(const void* src, void* dst, const usize dims[3], usize istride, usize ostride, stream_t stream) {
-  if (src == nullptr || dst == nullptr) {
+void copy_3d(Ptr3D src, Ptr3D dst, stream_t stream) {
+  // check ptr
+  if (src.ptr == nullptr || dst.ptr == nullptr || src.ptr == dst.ptr) {
     throw cuda::Error{cudaErrorInvalidValue};
   }
 
-  if (dims[0] == 0 || dims[1] == 0 || dims[2] == 0) {
+  // check type
+  if (src.size != dst.size || src.size == 0) {
     throw cuda::Error{cudaErrorInvalidValue};
   }
+
+  // check step
+  if (src.step[0] != 1 || dst.step[0] != 1) {
+    throw cuda::Error{cudaErrorInvalidValue};
+  }
+
+  // check dims
+  for (auto i = 0; i < 3; ++i) {
+    if (src.dims[i] == 0 || dst.dims[i] == 0) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+    if (src.dims[i] != dst.dims[i]) {
+      throw cuda::Error{cudaErrorInvalidValue};
+    }
+  }
+
+  const auto src_pitch = src.step[1] * src.size;
+  const auto dst_pitch = dst.step[1] * dst.size;
+
+  const auto width_bytes = src.dims[0] * src.size;
+  const auto height_elems = src.dims[1];
+  const auto depth_elems = src.dims[2];
 
   const auto params = cudaMemcpy3DParms{
-      .srcPtr = {const_cast<void*>(src), istride, dims[0], dims[1]},
-      .dstPtr = {dst, ostride, dims[0], dims[1]},
-      .extent = {dims[0], dims[1], dims[2]},
+      .srcPtr = {src.ptr, src_pitch, width_bytes, height_elems},
+      .dstPtr = {dst.ptr, dst_pitch, width_bytes, height_elems},
+      .extent = {width_bytes, height_elems, depth_elems},
       .kind = cudaMemcpyDefault,
   };
 
-  const auto err = stream ? cudaMemcpy3DAsync(&params, stream) : cudaMemcpy3D(&params);
+  const auto err = stream ? cudaMemcpy3DAsync(¶ms, stream) : cudaMemcpy3D(¶ms);
   if (err) {
     throw cuda::Error{err};
   }
 }
 
-}  // namespace nct::gpu
+}  // namespace nct::cuda

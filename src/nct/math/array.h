@@ -1,14 +1,14 @@
 #pragma once
 
 #include "nct/math/nview.h"
-#include "nct/gpu/mem.h"
+#include "nct/cuda/mem.h"
 
 namespace nct::math {
 
 template <class T, u32 N = 1>
 class Array {
   using view_t = NView<T, N>;
-  using data_t = gpu::RawBuf<T>;
+  using data_t = cuda::RawBuf<T>;
 
   data_t _data{};
   view_t _view{};
@@ -51,7 +51,7 @@ class Array {
   }
 
   auto size() const -> u32 {
-    return _view.size();
+    return _view.numel();
   }
 
   void sync_cpu() {
