@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nct/math.h"
-#include "nct/cuda.h"
 #include "nct/recon/params.h"
 
 namespace nct::recon {

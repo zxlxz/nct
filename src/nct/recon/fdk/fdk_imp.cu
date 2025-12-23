@@ -1,4 +1,5 @@
 #include "fdk_imp.h"
+#include "nct/cuda/mod.h"
 
 namespace nct::recon {
 
@@ -46,7 +47,7 @@ __global__ void _fdk_apply_filter(NView<c32, 2> dst, NView<f32, 1> filter) {
     return;
   }
 
-  auto  k = filter[x];
+  auto k = filter[x];
   auto& c = dst(x, y);
   c.real *= k;
   c.imag *= k;
@@ -65,7 +66,7 @@ void fdk_copy_data(NView<f32, 2> src, NView<f32, 2> dst) {
   CUDA_RUN(_fdk_copy_data, blks, trds)(src, dst, zero_pad);
 }
 
-void fdk_mul_filter_gpu(NView<c32, 2> dst, NView<f32, 1> filter) {
+void fdk_mul_filter(NView<c32, 2> dst, NView<f32, 1> filter) {
   const auto trds = dim3{16, 16};
   const auto blks = cuda::make_blk(dst._dims, trds);
   CUDA_RUN(_fdk_apply_filter, blks, trds)(dst, filter);

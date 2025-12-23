@@ -24,7 +24,7 @@ auto fdk_make_weight(const Params& p) -> Array<f32, 2> {
 }
 
 static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
-  const auto denom = math::PI * math::PI * T * T;
+  const auto denom = (math::PI * math::PI) * (T * T);
 
   auto f = [&](f64 s) {
     if (s == 0) {

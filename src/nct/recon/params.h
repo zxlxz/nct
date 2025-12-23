@@ -13,16 +13,16 @@ enum class DetType {
 struct Params {
   DetType det_type = DetType::Flat;  // detector type
 
-  f32   SOD;             // source->isocenter distance [mm]
-  f32   SDD;             // source->detector distance [mm]
-  vec2u det_shape;       // number of detector in axial-u [channel]
-  vec2f det_pixel;       // detector pixel size in axial-u and axial-v [mm]
-  vec3u vol_shape;       // volume shape [voxel]
-  vec3f vol_pixel;       // volume pixel size [mm]
-  f32   angle_start;     // number of views per revolution
-  f32   angle_inc;       // pitch per rev [mm]
-  f32   z_start = 0.0f;  // starting angle [rad]
-  f32   z_inc = 0.0f;    // starting bed position [mm]
+  f32 SOD;             // source->isocenter distance [mm]
+  f32 SDD;             // source->detector distance [mm]
+  vec2u det_shape;     // detector shape [u,v]
+  vec2f det_pixel;     // detector pixel size in [u,v] [mm]
+  vec3u vol_shape;     // volume shape [voxel]
+  vec3f vol_pixel;     // volume pixel size [mm]
+  f32 angle_start;     // number of views per revolution
+  f32 angle_inc;       // pitch per rev [mm]
+  f32 z_start = 0.0f;  // starting angle [rad]
+  f32 z_inc = 0.0f;    // starting bed position [mm]
 
  public:
   __hd__ auto angle(u32 iview) const -> f32 {

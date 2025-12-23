@@ -64,6 +64,18 @@ class Stream {
   void wait(const Event& event);
 };
 
+#if defined(__INTELLISENSE__) || !defined(__CUDACC__)
+struct dim3 {
+  unsigned x = 1;
+  unsigned y = 1;
+  unsigned z = 1;
+};
+static const auto blockIdx = dim3{1, 1, 1};
+static const auto threadIdx = dim3{1, 1, 1};
+static const auto blockDim = dim3{1, 1, 1};
+static const auto gridDim = dim3{1, 1, 1};
+#endif
+
 template <u32 N, class dim3>
 static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
   static_assert(N <= 3, "nct::cuda::make_blk: N out of range(max 3)");
@@ -83,21 +95,15 @@ static auto make_blk(const u32 (&dim)[N], const dim3& trd) -> dim3 {
 #if !defined(__CUDACC__) && !defined(__device__)
 #define __device__
 #define __global__
+namespace nct {
+using cuda::dim3;
+using cuda::blockIdx;
+using cuda::threadIdx;
+using cuda::blockDim;
+}  // namespace nct
 #endif
 
-#if defined(__INTELLISENSE__) && !defined(__device_builtin__)
-struct dim3 {
-  unsigned x = 1;
-  unsigned y = 1;
-  unsigned z = 1;
-};
-static const auto blockIdx = dim3{1, 1, 1};
-static const auto threadIdx = dim3{1, 1, 1};
-static const auto blockDim = dim3{1, 1, 1};
-static const auto gridDim = dim3{1, 1, 1};
-#endif
-
-#ifdef __INTELLISENSE__
+#ifndef __CUDACC__
 #define CUDA_RUN(f, ...) f
 #else
 #define CUDA_RUN(f, ...) f<<<__VA_ARGS__>>>
