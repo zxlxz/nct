@@ -1,5 +1,6 @@
 #pragma once
 
 #include "nct/math/vec.h"
-#include "nct/math/nview.h"
-#include "nct/math/array.h"
+#include "nct/math/ndview.h"
+#include "nct/math/ndarray.h"
+#include "nct/math/fft.h"

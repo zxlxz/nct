@@ -31,7 +31,7 @@ struct ConeFpGPU {
   }
 };
 
-__global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NView<f32, 3> views) {
+__global__ void _cone_fp_gpu(ConeFpGPU p, NdView<vec3f> srcs, Tex<f32, 3> vol, NdView<f32, 3> views) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
   const auto ip = blockIdx.z * blockDim.z + threadIdx.z;
@@ -89,8 +89,8 @@ __global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NV
     const auto vol_pos = (world_pos + p.vol_origin) / p.vol_pixel;
 
     // Check bounds manually
-    if (vol_pos.x < 0 || vol_pos.x >= static_cast<f32>(vol._dims[0]) || vol_pos.y < 0 ||
-        vol_pos.y >= static_cast<f32>(vol._dims[1]) || vol_pos.z < 0 || vol_pos.z >= static_cast<f32>(vol._dims[2])) {
+    if (vol_pos.x < 0 || vol_pos.x >= static_cast<f32>(vol._size[0]) || vol_pos.y < 0 ||
+        vol_pos.y >= static_cast<f32>(vol._size[1]) || vol_pos.z < 0 || vol_pos.z >= static_cast<f32>(vol._size[2])) {
       continue;
     }
 
@@ -103,8 +103,8 @@ __global__ void _cone_fp_gpu(ConeFpGPU p, NView<vec3f> srcs, Tex<f32, 3> vol, NV
   views(iu, iv, ip) = accum;
 }
 
-static auto make_srcs(const Params& p, u32 nproj) -> Array<vec3f> {
-  auto res = Array<vec3f>::with_shape({nproj}, MemType::MIXED);
+static auto make_srcs(const Params& p, u32 nproj) -> NdArray<vec3f> {
+  auto res = NdArray<vec3f>::with_shape({nproj}, MemType::UMA);
   for (auto i = 0U; i < nproj; ++i) {
     const auto s = p.src(i);
     res[i] = s;
@@ -113,16 +113,16 @@ static auto make_srcs(const Params& p, u32 nproj) -> Array<vec3f> {
   return res;
 }
 
-auto cone_fp(const Params& p, NView<f32, 3> vol, u32 nproj) -> Array<f32, 3> {
+auto cone_fp(const Params& p, NdView<f32, 3> vol, u32 nproj) -> NdArray<f32, 3> {
   // prepare data
   auto gpu_params = ConeFpGPU::from(p);
 
   const auto srcs = make_srcs(p, nproj);
 
-  const auto vol_tex = cuda::Texture<f32, 3>::from(vol);
+  const auto vol_tex = cuda::Array<f32, 3>::from(vol);
 
   const auto views_shape = vec3u{p.det_shape.x, p.det_shape.y, nproj};
-  auto views = Array<f32, 3>::with_shape(views_shape, MemType::GPU);
+  auto views = NdArray<f32, 3>::with_shape(views_shape, MemType::GPU);
 
   // run
   const auto trds = dim3{8, 8, 8};

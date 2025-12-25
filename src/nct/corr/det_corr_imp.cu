@@ -10,12 +10,12 @@ struct Coeffs {
   u32 _len;
 
  public:
-  static auto from(NView<f32> tbl) -> Coeffs {
-    if (tbl._dims[0] > 8) {
+  static auto from(NdView<f32> tbl) -> Coeffs {
+    if (tbl._size[0] > 8) {
       return {};
     }
 
-    auto res = Coeffs{._len = tbl._dims[0]};
+    auto res = Coeffs{._len = tbl._size[0]};
     for (auto i = 0U; i < res._len; ++i) {
       res._ptr[i] = tbl[i];
     }
@@ -34,15 +34,15 @@ struct Coeffs {
   }
 };
 
-__global__ void _det_corr_apply_all_gpu(NView<f32, 3> views,
-                                        NView<f32, 2> dark_tbl,
-                                        NView<f32, 2> air_tbl,
+__global__ void _det_corr_apply_all_gpu(NdView<f32, 3> views,
+                                        NdView<f32, 2> dark_tbl,
+                                        NdView<f32, 2> air_tbl,
                                         Coeffs        coeffs) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
-  const auto nu = views._dims[0];
-  const auto nv = views._dims[1];
-  const auto nw = views._dims[2];
+  const auto nu = views._size[0];
+  const auto nv = views._size[1];
+  const auto nw = views._size[2];
 
   if (iu >= nu || iv >= nv) {
     return;
@@ -63,14 +63,14 @@ __global__ void _det_corr_apply_all_gpu(NView<f32, 3> views,
   }
 }
 
-void det_corr_apply_all_gpu(NView<f32, 3> views,
-                            NView<f32, 2> dark_tbl,
-                            NView<f32, 2> air_tbl,
-                            NView<f32, 1> coeffs_tbl) {
+void det_corr_apply_all_gpu(NdView<f32, 3> views,
+                            NdView<f32, 2> dark_tbl,
+                            NdView<f32, 2> air_tbl,
+                            NdView<f32, 1> coeffs_tbl) {
   const auto coeffs = Coeffs::from(coeffs_tbl);
 
-  const auto trds = dim3{8, 8, 1};
-  const auto blks = cuda::make_blk(views._dims, trds);
+  const auto trds = cuda::dim3{8, 8, 1};
+  const auto blks = cuda::make_blk(views._size, trds);
   CUDA_RUN(_det_corr_apply_all_gpu, blks, trds)(views, dark_tbl, air_tbl, coeffs);
 }
 

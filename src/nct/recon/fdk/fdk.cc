@@ -4,7 +4,7 @@
 
 namespace nct::recon {
 
-auto FDK::operator()(NView<f32, 3> views) -> Array<f32, 3> {
+auto FDK::operator()(NdView<f32, 3> views) -> NdArray<f32, 3> {
   auto weight = fdk_make_weight(_params);
   fdk_apply_weight(views, *weight);
 

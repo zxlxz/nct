@@ -23,10 +23,10 @@ struct ScatterTbl {
     i32 spare[4];
   };
 
-  math::Array<f32, 1> scale;   // [nKp=npOR*nRx*nOA]
-  math::Array<u16, 1> index;   // [nKx]
-  math::Array<f32, 2> weight;  // [4, nKx]
-  math::Array<f32, 3> kernel;  // [nKp, nKz, nKxOnDisk]
+  math::NdArray<f32, 1> scale;   // [nKp=npOR*nRx*nOA]
+  math::NdArray<u16, 1> index;   // [nKx]
+  math::NdArray<f32, 2> weight;  // [4, nKx]
+  math::NdArray<f32, 3> kernel;  // [nKp, nKz, nKxOnDisk]
 
  public:
   void visit(this auto&& self, auto&& f) {
@@ -56,16 +56,16 @@ struct ScatterTbl {
   }
 
   void load_data(Slice<const u8> buf) {
-    this->scale = math::Array<f32, 1>::with_shape({npOR * nRx * nOA});
+    this->scale = math::NdArray<f32, 1>::with_shape({npOR * nRx * nOA});
     (void)buf.read(this->scale.as_bytes_mut());
 
-    this->index = math::Array<u16, 1>::with_shape({nKx});
+    this->index = math::NdArray<u16, 1>::with_shape({nKx});
     (void)buf.read(this->index.as_bytes_mut());
 
-    this->weight = math::Array<f32, 2>::with_shape({4, nKx});
+    this->weight = math::NdArray<f32, 2>::with_shape({4, nKx});
     (void)buf.read(this->weight.as_bytes_mut());
 
-    this->kernel = math::Array<f32, 3>::with_shape({npOR * nRx * nOA, nKz, nKxOnDisk});
+    this->kernel = math::NdArray<f32, 3>::with_shape({npOR * nRx * nOA, nKz, nKxOnDisk});
     (void)buf.read(this->kernel.as_bytes_mut());
   }
 };

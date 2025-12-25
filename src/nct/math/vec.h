@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nct/math/mod.h"
+#include "nct/core.h"
 
 namespace nct::math {
 
@@ -11,10 +11,6 @@ template <class T>
 struct alignas(sizeof(T) * 2) vec<T, 2> {
   using arr_t = T[2];
   T x, y;
-
-  operator const arr_t&() const {
-    return reinterpret_cast<const arr_t&>(*this);
-  }
 };
 
 template <class T>
@@ -22,19 +18,12 @@ struct alignas(sizeof(T) * 1) vec<T, 3> {
   using arr_t = T[3];
   T x, y, z;
 
-  operator const arr_t&() const {
-    return reinterpret_cast<const arr_t&>(*this);
-  }
 };
 
 template <class T>
 struct alignas(sizeof(T) * 4) vec<T, 4> {
   using arr_t = T[4];
   T x, y, z, w;
-
-  operator const arr_t&() const {
-    return reinterpret_cast<const arr_t&>(*this);
-  }
 };
 
 using vec2i = vec<i32, 2>;

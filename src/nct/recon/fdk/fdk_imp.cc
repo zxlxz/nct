@@ -1,5 +1,5 @@
 #include "fdk_imp.h"
-#include "nct/cuda/fft.h"
+#include "nct/math.h"
 
 namespace nct::recon {
 
@@ -8,10 +8,10 @@ static auto cone_beam_weight(const Params& p, f64 u, f64 v) -> f64 {
   return h / sqrt(u * u + v * v + h * h);
 }
 
-auto fdk_make_weight(const Params& p) -> Array<f32, 2> {
+auto fdk_make_weight(const Params& p) -> NdArray<f32, 2> {
   const auto [nu, nv] = p.det_shape;
 
-  auto res = Array<f32, 2>::with_shape({nu, nv}, MemType::MIXED);
+  auto res = NdArray<f32, 2>::with_shape({nu, nv}, Alloc::UMA);
 
   for (auto iv = 0U; iv < nv; iv++) {
     for (auto iu = 0U; iu < nu; iu++) {
@@ -23,8 +23,8 @@ auto fdk_make_weight(const Params& p) -> Array<f32, 2> {
   return res;
 }
 
-static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
-  const auto denom = (math::PI * math::PI) * (T * T);
+static auto ramp_impulse_response(u32 N, f64 T) -> NdArray<f32, 1> {
+  const auto denom = (M_PI * M_PI) * (T * T);
 
   auto f = [&](f64 s) {
     if (s == 0) {
@@ -33,7 +33,7 @@ static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
     return -static_cast<f32>(1.0 / (denom * (s * s)));
   };
 
-  auto res = Array<f32, 1>::with_shape({N}, MemType::MIXED);
+  auto res = NdArray<f32, 1>::with_shape({N}, Alloc::UMA);
   for (u32 i = 0; i < N; i++) {
     const auto s = i < N / 2 ? i : N - i;
     res[i] = f(s);
@@ -41,16 +41,16 @@ static auto ramp_impulse_response(u32 N, f64 T) -> Array<f32, 1> {
   return res;
 }
 
-auto fdk_make_filter(const Params& p) -> Array<f32, 1> {
-  const auto N = cuda::fft_len(p.det_shape.x * 2);
+auto fdk_make_filter(const Params& p) -> NdArray<f32, 1> {
+  const auto N = math::fft_len(p.det_shape.x * 2);
   const auto H = N / 2 + 1;
   const auto T = p.det_pixel.x;
 
   auto h_data = ramp_impulse_response(N, T);
-  auto h_ramp = Array<c32, 1>::with_shape({H}, MemType::MIXED);
-  cuda::fft(*h_data, *h_ramp);
+  auto h_ramp = NdArray<c32, 1>::with_shape({H}, Alloc::UMA);
+  math::fft(*h_data, *h_ramp);
 
-  auto h_real = Array<f32, 1>::with_shape({H}, MemType::MIXED);
+  auto h_real = NdArray<f32, 1>::with_shape({H}, Alloc::UMA);
   for (auto i = 0u; i < H; ++i) {
     const auto r = h_ramp[i].real / N;
     h_real[i] = r;
@@ -60,27 +60,26 @@ auto fdk_make_filter(const Params& p) -> Array<f32, 1> {
   return h_real;
 }
 
-void fdk_apply_filter(NView<f32, 3> views, NView<f32, 1> filter) {
-  const auto n_det = views._dims[0];
-  const auto n_slice = views._dims[1];
-  const auto n_proj = views._dims[2];
+void fdk_apply_filter(NdView<f32, 3> views, NdView<f32, 1> filter) {
+  const auto n_det = views._size[0];
+  const auto n_slice = views._size[1];
+  const auto n_proj = views._size[2];
 
-  const auto pad_len = filter._dims[0];
+  const auto pad_len = filter._size[0];
   const auto fft_len = (pad_len - 1) * 2;
 
-  auto pad_data = Array<f32, 2>::with_shape({pad_len, n_slice}, MemType::GPU);
-  auto fft_data = Array<c32, 2>::with_shape({fft_len, n_slice}, MemType::GPU);
+  auto pad_data = NdArray<f32, 2>::with_shape({pad_len, n_slice}, Alloc::GPU);
+  auto fft_data = NdArray<c32, 2>::with_shape({fft_len, n_slice}, Alloc::GPU);
   auto pad_view = *pad_data;
   auto fft_view = *fft_data;
 
   for (auto i_proj = 0U; i_proj < n_proj; ++i_proj) {
     auto view = views.slice_at<2>(i_proj);
-    math::zero(pad_view);
-    math::copy(view, pad_view);
-    cuda::fft(pad_view, fft_view);
+    fdk_copy_data(view, pad_view);
+    math::fft(pad_view, fft_view);
     fdk_mul_filter(fft_view, filter);
-    cuda::ifft(fft_view, pad_view);
-    math::copy(pad_view, view);
+    math::ifft(fft_view, pad_view);
+    fdk_copy_data(pad_view, view);
   }
 }
 

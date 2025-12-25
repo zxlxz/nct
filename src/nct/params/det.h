@@ -25,9 +25,9 @@ struct DetPosTbl {
     f32 aFsPosX_du[MAX_FFS];
     f32 aFsPosZ_du[MAX_FFS];
   };
-  math::Array<f32, 3> xpos = {};  // [nDetector][nSlice][nFFS]
-  math::Array<f32, 3> ypos = {};  // [nDetector][nSlice][nFFS]
-  math::Array<f32, 3> zpos = {};  // [nDetector][nSlice][nFFS]
+  math::NdArray<f32, 3> xpos = {};  // [nDetector][nSlice][nFFS]
+  math::NdArray<f32, 3> ypos = {};  // [nDetector][nSlice][nFFS]
+  math::NdArray<f32, 3> zpos = {};  // [nDetector][nSlice][nFFS]
 
  public:
   void visit(this auto&& self, auto&& f) {
@@ -60,9 +60,9 @@ struct DetPosTbl {
   }
 
   void load_data(Slice<const u8> buf) {
-    this->xpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
-    this->ypos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
-    this->zpos = math::Array<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
+    this->xpos = math::NdArray<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
+    this->ypos = math::NdArray<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
+    this->zpos = math::NdArray<f32, 3>::with_shape({nDetectors, nSlices, nFFS});
     (void)buf.read(xpos.as_bytes_mut());
     (void)buf.read(ypos.as_bytes_mut());
     (void)buf.read(zpos.as_bytes_mut());

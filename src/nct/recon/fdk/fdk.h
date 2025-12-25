@@ -10,7 +10,7 @@ struct FDK {
   Params _params;
 
  public:
-  auto operator()(NView<f32, 3> views) -> Array<f32, 3>;
+  auto operator()(NdView<f32, 3> views) -> NdArray<f32, 3>;
 };
 
 }  // namespace nct::recon

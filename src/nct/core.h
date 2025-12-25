@@ -5,7 +5,6 @@
 
 #ifdef __CUDACC__
 #include <sfc/core/mem.h>
-#include <sfc/core/ptr.h>
 #else
 #include <sfc/core.h>
 #include <sfc/alloc.h>

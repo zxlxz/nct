@@ -60,7 +60,7 @@ struct ConeBpGPU {
   }
 };
 
-__global__ void _cone_bp_gpu(ConeBpGPU p, NView<vec3f> srcs, LTex<f32, 3> views, NView<f32, 3> vol) {
+__global__ void _cone_bp_gpu(ConeBpGPU p, NdView<vec3f> srcs, LTex<f32, 3> views, NdView<f32, 3> vol) {
   const auto ix = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iy = blockIdx.y * blockDim.y + threadIdx.y;
   const auto iz = blockIdx.z * blockDim.z + threadIdx.z;
@@ -72,7 +72,7 @@ __global__ void _cone_bp_gpu(ConeBpGPU p, NView<vec3f> srcs, LTex<f32, 3> views,
   const auto vox = p.vox_to_world({ix, iy, iz});
 
   auto accum = 0.0f;
-  for (auto proj_idx = 0U; proj_idx < views._dims[2]; ++proj_idx) {
+  for (auto proj_idx = 0U; proj_idx < views._size[2]; ++proj_idx) {
     const auto src = srcs[proj_idx];
     const auto len = math::len(src - vox);
     if (len < 1e-6f) {
@@ -93,8 +93,8 @@ __global__ void _cone_bp_gpu(ConeBpGPU p, NView<vec3f> srcs, LTex<f32, 3> views,
   vol(ix, iy, iz) += accum;
 }
 
-static auto make_srcs(const Params& p, u32 nproj) -> Array<vec3f> {
-  auto res = Array<vec3f>::with_shape({nproj}, MemType::MIXED);
+static auto make_srcs(const Params& p, u32 nproj) -> NdArray<vec3f> {
+  auto res = NdArray<vec3f>::with_shape({nproj}, MemType::UMA);
   for (auto i = 0U; i < nproj; ++i) {
     const auto s = p.src(i);
     res[i] = s;
@@ -103,18 +103,18 @@ static auto make_srcs(const Params& p, u32 nproj) -> Array<vec3f> {
   return res;
 }
 
-auto cone_bp(const Params& p, NView<f32, 3> views) -> Array<f32, 3> {
-  const auto nproj = views._dims[2];
+auto cone_bp(const Params& p, NdView<f32, 3> views) -> NdArray<f32, 3> {
+  const auto nproj = views._size[2];
 
   // prepare data
   auto gpu_params = ConeBpGPU::from(p);
 
   auto srcs = make_srcs(p, nproj);
   auto views_tex = cuda::LTexture<f32, 3>::from(views);
-  auto vol = Array<f32, 3>::with_shape(p.vol_shape, MemType::GPU);
+  auto vol = NdArray<f32, 3>::with_shape(p.vol_shape, cuda::Alloc::GPU);
 
   // run
-  const auto trds = dim3{8, 8, 8};
+  const auto trds = cuda::dim3{8, 8, 8};
   const auto blks = cuda::make_blk(vol.dims(), trds);
   CUDA_RUN(_cone_bp_gpu, blks, trds)(gpu_params, *srcs, *views_tex, *vol);
 
