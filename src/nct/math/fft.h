@@ -4,6 +4,7 @@
 
 namespace nct::math {
 
+using u32 = unsigned;
 using f32 = float;
 using f64 = double;
 
@@ -17,18 +18,18 @@ struct c64 {
   double imag;
 };
 
-auto fft_len(usize n) -> usize;
+auto fft_len(u32 n) -> u32;
 
-template <usize N>
+template <u32 N>
 auto fft(NdView<c32, N> in, NdView<c32, N> out) -> bool;
 
-template <usize N>
+template <u32 N>
 auto ifft(NdView<c32, N> in, NdView<c32, N> out) -> bool;
 
-template <usize N>
+template <u32 N>
 auto fft(NdView<f32, N> in, NdView<c32, N> out) -> bool;
 
-template <usize N>
+template <u32 N>
 auto ifft(NdView<c32, N> in, NdView<f32, N> out) -> bool;
 
 }  // namespace nct::math

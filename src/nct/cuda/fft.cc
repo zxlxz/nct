@@ -7,9 +7,7 @@
 
 namespace nct::cuda {
 
-auto fft_plan_1d(const size_t (&dim)[1], cufftType type, size_t batch) -> fft_plan_t {
-  const auto nx = static_cast<int>(dim[0]);
-
+auto fft_plan_1d(u32 nx, cufftType type, u32 batch) -> fft_plan_t {
   auto plan = CUFFT_PLAN_NULL;
 
   const auto ret = cufftPlan1d(&plan, nx, type, static_cast<int>(batch));
@@ -29,16 +27,16 @@ void fft_destroy(fft_plan_t plan) {
   }
 }
 
-auto fft_plan_c2c(const size_t (&dim)[1], size_t batch) -> fft_plan_t {
-  return fft_plan_1d(dim, CUFFT_C2C, batch);
+auto fft_plan_c2c(const u32 (&dim)[1], u32 batch) -> fft_plan_t {
+  return fft_plan_1d(static_cast<int>(dim[0]), CUFFT_C2C, batch);
 }
 
-auto fft_plan_r2c(const size_t (&dim)[1], size_t batch) -> fft_plan_t {
-  return fft_plan_1d(dim, CUFFT_R2C, batch);
+auto fft_plan_r2c(const u32 (&dim)[1], u32 batch) -> fft_plan_t {
+  return fft_plan_1d(static_cast<int>(dim[0]), CUFFT_R2C, batch);
 }
 
-auto fft_plan_c2r(const size_t (&dim)[1], size_t batch) -> fft_plan_t {
-  return fft_plan_1d(dim, CUFFT_C2R, batch);
+auto fft_plan_c2r(const u32 (&dim)[1], u32 batch) -> fft_plan_t {
+  return fft_plan_1d(static_cast<int>(dim[0]), CUFFT_C2R, batch);
 }
 
 void fft_exec_c2c(fft_plan_t plan, void* in, void* out, int direction) {

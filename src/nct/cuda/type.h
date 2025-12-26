@@ -15,7 +15,6 @@ struct dim3 {
   unsigned y = 1;
   unsigned z = 1;
 };
-
 static const auto blockIdx = cuda::dim3{1, 1, 1};
 static const auto threadIdx = cuda::dim3{1, 1, 1};
 static const auto blockDim = cuda::dim3{1, 1, 1};
@@ -38,7 +37,7 @@ struct Tex<T, 2> {
     return x >= 0 && x < _size[0] && y >= 0 && y < _size[1];
   }
 
-  __device__ auto operator()(float x, float y) const -> T {
+  __device__ auto get(float x, float y) const -> T {
     auto res = T{0};
 #ifdef __CUDACC__
     ::tex2D(&res, _tex, x, y);
@@ -57,7 +56,7 @@ struct Tex<T, 3> {
     return x >= 0 && x < _size[0] && y >= 0 && y < _size[1] && z >= 0 && z < _size[2];
   }
 
-  __device__ auto operator()(float x, float y, float z) const -> T {
+  __device__ auto get(float x, float y, float z) const -> T {
     auto res = T{0};
 #ifdef __CUDACC__
     ::tex3D(&res, _tex, x, y, z);
@@ -76,7 +75,7 @@ struct LTex<T, 3> {
     return k < _size[2] && x >= 0 && x < _size[0] && y >= 0 && y < _size[1];
   }
 
-  __device__ auto operator()(unsigned k, float x, float y) const -> T {
+  __device__ auto get(unsigned k, float x, float y) const -> T {
     auto res = T{0};
 #ifdef __CUDACC__
     ::tex2DLayered(&res, _tex, x, y, k);

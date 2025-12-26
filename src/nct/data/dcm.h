@@ -18,12 +18,13 @@ struct DcmTag {
     return DcmTag{h, l};
   }
 
-  auto as_u32() -> u32 {
+  auto as_u32() const -> u32 {
     const auto h = static_cast<u32>(group) << 16;
     const auto l = static_cast<u32>(element);
     return h | l;
   }
 
+ public:
   auto operator==(const DcmTag& other) const noexcept -> bool {
     return group == other.group && element == other.element;
   }
@@ -34,17 +35,13 @@ struct DcmTag {
 };
 
 struct DcmVR {
-  alignas(sizeof(u16)) char _val[2];
+  char _val[2] = {};
 
  public:
   DcmVR() = default;
-
   DcmVR(const char (&s)[3]) noexcept : _val{s[0], s[1]} {}
 
-  auto operator==(const DcmVR& other) const noexcept -> bool {
-    return _val[0] == other._val[0] && _val[1] == other._val[1];
-  }
-
+ public:
   auto is_i16() const -> bool;
   auto is_u16() const -> bool;
   auto is_i32() const -> bool;
@@ -57,6 +54,11 @@ struct DcmVR {
   auto is_seq() const -> bool;
 
   auto head_size() const -> u32;
+
+ public:
+  auto operator==(const DcmVR& other) const noexcept -> bool {
+    return _val[0] == other._val[0] && _val[1] == other._val[1];
+  }
 
   void fmt(auto& f) const {
     char buf[3] = {_val[0], _val[1], 0};
@@ -75,12 +77,12 @@ struct DcmVal {
  public:
   template <class T>
   DcmVal(T val) noexcept : _inn{static_cast<T&&>(val)} {}
-
-  ~DcmVal() noexcept {}
+  ~DcmVal() noexcept = default;
 
   DcmVal(DcmVal&&) noexcept = default;
   DcmVal& operator=(DcmVal&&) noexcept = default;
 
+ public:
   template <class T>
   auto is() const -> bool {
     return _inn.template is<T>();
@@ -95,13 +97,10 @@ struct DcmVal {
     _inn.map(f);
   }
 
-  auto as_bytes() const -> Slice<const u8> {
-    return _inn.template as<Vec<u8>>().as_slice();
-  }
-
+ public:
   void fmt(auto& f) const {
     if (_inn.is<Vec<u8>>()) {
-      auto buf = this->as_bytes();
+      auto buf = _inn.template as<Vec<u8>>().as_slice();
       f.write_fmt("bin(len={})", buf.len());
     } else {
       _inn.fmt(f);
@@ -122,6 +121,7 @@ struct DcmElmt {
   auto decode_head(Slice<const u8> buf) -> usize;
   auto decode_data(Slice<const u8> buf) -> usize;
 
+ public:
   void fmt(auto& f) const {
     f.write_fmt("{}:{} {}", tag, vr, val);
   }

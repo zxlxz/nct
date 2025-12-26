@@ -153,28 +153,16 @@ struct DMSFoot {
   u16 stamp;
 };
 
-class RawData {
-  usize _ndet = 0;
-  usize _nfan = 0;
-  usize _nview = 0;
-  usize _fan_size = 0;
-  usize _view_size = 0;
-  Vec<u8> _data = {};
+struct RawData {
+  usize det_cnt = 0;      // number of detectors per slice
+  usize slice_cnt = 0;    // number of slices per view
+  usize view_cnt = 0;     // number of views
+  usize slice_size = 0;   // size of one slice data in bytes
+  usize view_size = 0;    // size of one view data in bytes
+  Vec<u8> raw_data = {};  // raw data buffer
 
  public:
   static auto load_file(Str path) -> RawData;
-
-  auto view_cnt() const -> usize {
-    return _nview;
-  }
-
-  auto slice_cnt() const -> usize {
-    return _nfan;
-  }
-
-  auto det_cnt() const -> usize {
-    return _ndet;
-  }
 
   auto get(usize view_idx, usize slice_idx) const -> Slice<const u16>;
 };

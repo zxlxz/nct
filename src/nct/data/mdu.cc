@@ -3,10 +3,6 @@
 
 namespace nct::data {
 
-MduTbl::MduTbl() noexcept {}
-
-MduTbl::~MduTbl() noexcept {}
-
 auto MduTbl::load(Slice<const u8> buf) -> bool {
   for (; !buf.is_empty();) {
     auto tmp = DcmElmt{};

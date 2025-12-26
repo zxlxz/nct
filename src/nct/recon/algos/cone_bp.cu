@@ -4,6 +4,8 @@
 
 namespace nct::recon {
 
+using namespace cuda;
+
 struct ConeBpGPU {
   f32 SOD;           // source->iso center distance [mm]
   f32 SDD;           // source->detector distance [mm]
@@ -14,15 +16,19 @@ struct ConeBpGPU {
 
  public:
   static auto from(const Params& p) -> ConeBpGPU {
-    const auto res = ConeBpGPU{
+    const auto vol_shape = vec3u{p.vol_shape[0], p.vol_shape[1], p.vol_shape[2]};
+    const auto vol_pixel = vec3f{p.vol_pixel[0], p.vol_pixel[1], p.vol_pixel[2]};
+    const auto det_pixel = vec2f{p.det_pixel[0], p.det_pixel[1]};
+    const auto det_shape = vec2u{p.det_shape[0], p.det_shape[1]};
+
+    return ConeBpGPU{
         .SOD = p.SOD,
         .SDD = p.SDD,
-        .vol_pixel = p.vol_pixel,
-        .vol_origin = (0.5f * p.vol_shape - vec3f{0.5, 0.5, 0.5}) * p.vol_pixel,
-        .det_pixel = p.det_pixel,
-        .det_center = 0.5f * p.det_shape - vec2f{0.5f, 0.5f},
+        .vol_pixel = vol_pixel,
+        .vol_origin = (0.5f * vol_shape - vec3f{0.5, 0.5, 0.5}) * vol_pixel,
+        .det_pixel = det_pixel,
+        .det_center = 0.5f * det_shape - vec2f{0.5f, 0.5f},
     };
-    return res;
   }
 
   // convert: voxel index -> world coordinate system
@@ -81,16 +87,16 @@ __global__ void _cone_bp_gpu(ConeBpGPU p, NdView<vec3f> srcs, LTex<f32, 3> views
 
     const auto det = p.ray_intersect_det(src, vox);
     const auto pxl = p.det_to_pixel(det);
-    if (!views.in_bounds(proj_idx, pxl)) {
+    if (!views.in_bounds(proj_idx, pxl.x, pxl.y)) {
       continue;
     }
 
-    const auto val = views(proj_idx, pxl);
+    const auto val = views.get(proj_idx, pxl.x, pxl.y);
     const auto dist_weight = 1.0f / (len * len * len);
     accum += dist_weight * val;
   }
 
-  vol(ix, iy, iz) += accum;
+  vol[{ix, iy, iz}] += accum;
 }
 
 static auto make_srcs(const Params& p, u32 nproj) -> NdArray<vec3f> {
@@ -110,13 +116,14 @@ auto cone_bp(const Params& p, NdView<f32, 3> views) -> NdArray<f32, 3> {
   auto gpu_params = ConeBpGPU::from(p);
 
   auto srcs = make_srcs(p, nproj);
-  auto views_tex = cuda::LTexture<f32, 3>::from(views);
+  auto views_arr = cuda::LayeredArray<f32, 3>::from(views);
+  auto views_tex = views_arr.tex();
   auto vol = NdArray<f32, 3>::with_shape(p.vol_shape, cuda::Alloc::GPU);
 
   // run
   const auto trds = cuda::dim3{8, 8, 8};
-  const auto blks = cuda::make_blk(vol.dims(), trds);
-  CUDA_RUN(_cone_bp_gpu, blks, trds)(gpu_params, *srcs, *views_tex, *vol);
+  const auto blks = cuda::make_blk(vol.size(), trds);
+  CUDA_RUN(_cone_bp_gpu, blks, trds)(gpu_params, *srcs, views_tex, *vol);
 
   return vol;
 }

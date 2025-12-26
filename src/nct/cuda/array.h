@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nct/core.h"
+#include "nct/cuda/type.h"
 #include "nct/math/ndarray.h"
 
 struct cudaArray;
@@ -23,9 +23,10 @@ enum class FiltMode {
 };
 
 template <class T>
-auto array_new(const size_t (&size)[3], unsigned flags = 0) -> arr_t;
+auto array_new(u32 ndim, const u32 (&size)[3], u32 flags = 0) -> arr_t;
 void array_del(arr_t arr);
 void array_set(arr_t arr, const void* src);
+void array_ext(arr_t arr, u32 ndim, u32 (&size)[3]);
 
 auto texture_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t;
 void texture_del(tex_t obj);
@@ -37,7 +38,6 @@ class Array {
  public:
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  size_t _size[N] = {0};
 
  public:
   Array() noexcept = default;
@@ -61,13 +61,9 @@ class Array {
     return *this;
   }
 
-  static auto with_shape(const size_t (&size)[N]) -> Array {
-    const size_t fixed_size[3] = {size[0], N > 1 ? size[1] : 1, N > 2 ? size[2] : 1};
+  static auto with_shape(const u32 (&size)[N]) -> Array {
     auto res = Array{};
-    res._arr = cuda::array_new<T>(fixed_size, 0);
-    for (u32 i = 0; i < N; ++i) {
-      res._size[i] = static_cast<u32>(size[i]);
-    }
+    res._arr = cuda::array_new<T>(N, size, 0);
     return res;
   }
 
@@ -78,16 +74,17 @@ class Array {
   }
 
   void assign(math::NdView<T, N> src) {
-    const size_t size[3] = {_size[0], N > 1 ? _size[1] : 1, N > 2 ? _size[2] : 1};
     cuda::array_set(_arr, src._data);
   }
 
-  auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) -> tex_t {
-    if (_tex != 0) {
-      cuda::texture_del(_tex);
+  auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) const -> Tex<T, N> {
+    if (_tex == 0) {
+      const_cast<tex_t&>(_tex) = cuda::texture_new(_arr, filt_mode, addr_mode);
     }
-    _tex = cuda::texture_new(_arr, filt_mode, addr_mode);
-    return _tex;
+
+    auto res = cuda::Tex<T, N>{._tex = _tex};
+    cuda::array_ext(_arr, N, res._size);
+    return res;
   }
 };
 
@@ -98,7 +95,6 @@ class LayeredArray {
  public:
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  u32 _size[N] = {0};
 
  public:
   LayeredArray() noexcept = default;
@@ -122,23 +118,30 @@ class LayeredArray {
     return *this;
   }
 
-  static auto with_shape(size_t layers, const size_t (&size)[N - 1]) -> LayeredArray {
-    const size_t fixed_size[3] = {size[0], N > 2 ? size[1] : 1, layers};
+  static auto with_shape(const u32 (&size)[N]) -> LayeredArray {
     auto res = LayeredArray{};
-    res._arr = cuda::array_new<T>(fixed_size, 1);
-    for (u32 i = 0; i < N - 1; ++i) {
-      res._size[i] = static_cast<u32>(size[i]);
-    }
-    res._size[N - 1] = static_cast<u32>(layers);
+    res._arr = cuda::array_new<T>(N, size, 1);
     return res;
   }
 
-  auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) -> tex_t {
-    if (_tex != 0) {
-      cuda::texture_del(_tex);
+  static auto from(math::NdView<T, N> src) -> LayeredArray {
+    auto res = LayeredArray::with_shape(src._size);
+    res.assign(src);
+    return res;
+  }
+
+  void assign(math::NdView<T, N> src) {
+    cuda::array_set(_arr, src._data);
+  }
+
+  auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) const -> LTex<T, N> {
+    if (_tex == 0) {
+      const_cast<tex_t&>(_tex) = cuda::texture_new(_arr, filt_mode, addr_mode);
     }
-    _tex = cuda::texture_new(_arr, static_cast<int>(filt_mode), static_cast<int>(addr_mode));
-    return _tex;
+
+    auto res = cuda::LTex<T, N>{._tex = _tex};
+    cuda::array_ext(_arr, N, res._size);
+    return res;
   }
 };
 

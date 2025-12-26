@@ -36,7 +36,6 @@ auto Device::info(int id) -> Info {
   const auto res = Info{
       .memory_size = prop.totalGlobalMem,
       .sm_count = static_cast<u32>(prop.multiProcessorCount),
-
   };
   return res;
 }

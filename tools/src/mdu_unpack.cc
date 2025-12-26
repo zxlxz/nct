@@ -15,14 +15,14 @@ template <class T>
 auto unpack_tbl(const DcmElmt& elmt) -> T {
   auto tbl = T{};
 
-  auto buf = elmt.val.as_bytes();
+  auto buf = elmt.val.as<Vec<u8>>().as_slice();
   if constexpr (requires { tbl.load_data(buf); }) {
     auto hdr = MduHdr{};
-    auto{buf}.read(mem::as_bytes_mut(hdr));
+    (void)buf.read(mem::as_bytes_mut(hdr));
     tbl.load_head(buf[{hdr.head_offset, hdr.data_offset}]);
     tbl.load_data(buf[{hdr.data_offset, hdr.data_offset + hdr.data_length}]);
   } else {
-    buf.read(mem::as_bytes_mut(tbl));
+    (void)buf.read(mem::as_bytes_mut(tbl));
   }
 
   return tbl;
@@ -38,13 +38,12 @@ void save_tbl(const MduTbl& mdu, fs::Path out_dir) {
 
   const auto tbl = unpack_tbl<T>(*elmt);
   if constexpr (__is_same(T, DetPosTbl)) {
-    fs::write(out_dir.join("detpos_x.bin"), tbl.xpos.as_bytes());
-    fs::write(out_dir.join("detpos_y.bin"), tbl.ypos.as_bytes());
-    fs::write(out_dir.join("detpos_z.bin"), tbl.zpos.as_bytes());
+    (void)fs::write(*out_dir.join("detpos_x.bin"), tbl.xpos.as_bytes());
+    (void)fs::write(*out_dir.join("detpos_y.bin"), tbl.ypos.as_bytes());
+    (void)fs::write(*out_dir.join("detpos_z.bin"), tbl.zpos.as_bytes());
     return;
   }
 }
-
 
 template <class T>
 void dump_tbl(const MduTbl& mdu) {
@@ -74,7 +73,7 @@ void dump_mdu(const MduTbl& mdu) {
 }
 
 void save_tbl(const MduTbl& mdu, fs::Path out_dir) {
-  fs::create_dir(out_dir);
+  (void)fs::create_dir(out_dir);
   save_tbl<DetPosTbl>(mdu, out_dir);
 }
 
@@ -84,7 +83,7 @@ auto load_mdu(fs::Path path) -> MduTbl {
   auto buf = Vec<u8>{};
   {
     auto file = fs::File::open(path.as_str()).unwrap();
-    file.read_to_end(buf);
+    (void)file.read_to_end(buf);
   }
 
   auto mdu = MduTbl{};
@@ -94,9 +93,9 @@ auto load_mdu(fs::Path path) -> MduTbl {
 
 int main(int argc, const char* argv[]) {
   auto cmd = app::Clap{"dump_mdu"};
-  cmd.add_opt("h:help", "Print help");
-  cmd.add_arg("i:input", "Input file path", "INPUT");
-  cmd.add_arg("o:output", "Output directory path", "OUTPUT");
+  cmd.flag("h:help", "Print help");
+  cmd.arg("i:input", "Input file path", "INPUT");
+  cmd.arg("o:output", "Output directory path", "OUTPUT");
 
   cmd.parse_cmdline(argc, argv);
   if (cmd.get("help")) {

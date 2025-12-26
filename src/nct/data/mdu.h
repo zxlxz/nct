@@ -5,18 +5,16 @@
 namespace nct::data {
 
 class MduTbl {
-  Vec<DcmElmt> _elmts;
+  Vec<DcmElmt> _elmts{};
 
  public:
-  MduTbl() noexcept;
-  ~MduTbl() noexcept;
+  MduTbl() noexcept = default;
+  ~MduTbl() noexcept = default;
 
   MduTbl(MduTbl&&) noexcept = default;
   MduTbl& operator=(MduTbl&&) noexcept = default;
 
-  MduTbl(const MduTbl&) = delete;
-  MduTbl& operator=(const MduTbl&) = delete;
-
+ public:
   auto load(Slice<const u8> buf) -> bool;
 
   auto as_slice() const -> Slice<const DcmElmt>;

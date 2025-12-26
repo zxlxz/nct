@@ -15,10 +15,10 @@ struct Params {
 
   f32 SOD;             // source->isocenter distance [mm]
   f32 SDD;             // source->detector distance [mm]
-  vec2u det_shape;     // detector shape [u,v]
-  vec2f det_pixel;     // detector pixel size in [u,v] [mm]
-  vec3u vol_shape;     // volume shape [voxel]
-  vec3f vol_pixel;     // volume pixel size [mm]
+  u32 det_shape[2];    // detector shape [u,v]
+  f32 det_pixel[2];    // detector pixel size in [u,v] [mm]
+  u32 vol_shape[3];    // volume shape [voxel]
+  f32 vol_pixel[3];    // volume pixel size [mm]
   f32 angle_start;     // number of views per revolution
   f32 angle_inc;       // pitch per rev [mm]
   f32 z_start = 0.0f;  // starting angle [rad]

@@ -6,9 +6,13 @@
 namespace nct::cuda {
 
 template <class T>
-auto array_new(const size_t (&size)[3], u32 flags) -> arr_t {
+auto array_new(u32 ndim, const u32 (&size)[3], u32 flags) -> arr_t {
   const auto fmt = cudaCreateChannelDesc<T>();
-  const auto ext = cudaExtent{size[0], size[1], size[2]};
+  const auto ext = cudaExtent{
+      ndim > 0 ? size[0] : 1,
+      ndim > 1 ? size[1] : 1,
+      ndim > 2 ? size[2] : 1,
+  };
 
   auto res = arr_t{nullptr};
   auto err = cudaMalloc3DArray(&res, &fmt, ext, flags);
@@ -26,6 +30,29 @@ void array_del(arr_t arr) {
 
   if (auto err = ::cudaFreeArray(arr)) {
     throw cuda::Error{err};
+  }
+}
+
+void array_ext(arr_t arr, u32 ndim, u32 (&size)[3]) {
+  if (arr == nullptr) {
+    return;
+  }
+
+  auto format = cudaChannelFormatDesc{};
+  auto extent = cudaExtent{};
+  auto flags = 0;
+  if (auto err = cudaArrayGetInfo(&format, &extent, &flags, arr)) {
+    throw cuda::Error{err};
+  }
+
+  if (ndim > 0) {
+    size[0] = static_cast<u32>(extent.width);
+  }
+  if (ndim > 1) {
+    size[1] = static_cast<u32>(extent.height);
+  }
+  if (ndim > 2) {
+    size[2] = static_cast<u32>(extent.depth);
   }
 }
 
@@ -64,13 +91,13 @@ void array_set(arr_t arr, const void* src) {
   }
 }
 
-auto texture_new(arr_t arr, int filt_mode, int addr_mode) -> tex_t {
+auto texture_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t {
   if (!arr) {
     return tex_t{0};
   }
 
-  auto tex_addr = cudaTextureAddressMode(addr_mode);
-  auto tex_filt = cudaTextureFilterMode(filt_mode);
+  auto tex_addr = static_cast<cudaTextureAddressMode>(addr_mode);
+  auto tex_filt = static_cast<cudaTextureFilterMode>(filt_mode);
 
   const auto tex_res = cudaResourceDesc{
       .resType = cudaResourceTypeArray,

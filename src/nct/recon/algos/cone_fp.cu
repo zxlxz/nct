@@ -16,13 +16,19 @@ struct ConeFpGPU {
 
  public:
   static auto from(const Params& p) -> ConeFpGPU {
+    const auto vol_shape = vec3u{p.vol_shape[0], p.vol_shape[1], p.vol_shape[2]};
+    const auto vol_pixel = vec3f{p.vol_pixel[0], p.vol_pixel[1], p.vol_pixel[2]};
+
+    const auto det_shape = vec2u{p.det_shape[0], p.det_shape[1]};
+    const auto det_pixel = vec2f{p.det_pixel[0], p.det_pixel[1]};
+
     const auto res = ConeFpGPU{
         .SOD = p.SOD,
         .SDD = p.SDD,
-        .vol_pixel = p.vol_pixel,
-        .vol_origin = (0.5f * p.vol_shape - vec3f{0.5, 0.5, 0.5}) * p.vol_pixel,
-        .det_pixel = p.det_pixel,
-        .det_center = 0.5f * p.det_shape - vec2f{0.5f, 0.5f},
+        .vol_pixel = vol_pixel,
+        .vol_origin = (0.5f * vol_shape - vec3f{0.5, 0.5, 0.5}) * vol_pixel,
+        .det_pixel = det_pixel,
+        .det_center = 0.5f * det_shape - vec2f{0.5f, 0.5f},
     };
     return res;
   }
@@ -121,15 +127,16 @@ auto cone_fp(const Params& p, NdView<f32, 3> vol, u32 nproj) -> NdArray<f32, 3> 
 
   const auto srcs = make_srcs(p, nproj);
 
-  const auto vol_tex = cuda::Array<f32, 3>::from(vol);
+  const auto vol_arr = cuda::Array<f32, 3>::from(vol);
+  const auto vol_tex = vol_arr.tex();
 
-  const auto views_shape = vec3u{p.det_shape.x, p.det_shape.y, nproj};
+  const usize views_shape[3] = {p.det_shape.x, p.det_shape.y, nproj};
   auto views = NdArray<f32, 3>::with_shape(views_shape, MemType::GPU);
 
   // run
   const auto trds = dim3{8, 8, 8};
-  const auto blks = cuda::make_blk<3>(views_shape, trds);
-  CUDA_RUN(_cone_fp_gpu, blks, trds)(gpu_params, *srcs, *vol_tex, *views);
+  const auto blks = cuda::make_blk(views_shape, trds);
+  CUDA_RUN(_cone_fp_gpu, blks, trds)(gpu_params, *srcs, vol_tex, *views);
 
   return views;
 }

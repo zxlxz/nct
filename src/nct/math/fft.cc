@@ -29,7 +29,7 @@ class FFT {
   }
 
   template <class I, class O>
-  static auto xnew(const usize (&dims)[1], usize batch) -> FFT {
+  static auto xnew(const u32 (&dims)[1], u32 batch) -> FFT {
     if constexpr (trait::same_<I, c32> && trait::same_<O, c32>) {
       return FFT{cuda::fft_plan_c2c(dims, batch)};
     } else if constexpr (trait::same_<I, f32> && trait::same_<O, c32>) {
@@ -78,7 +78,7 @@ class KVCache {
   }
 };
 
-auto fft_len(usize n) -> usize {
+auto fft_len(u32 n) -> u32 {
   auto res = 1U;
   while (res < n) {
     res *= 2;
@@ -98,10 +98,10 @@ auto fft_len(usize n) -> usize {
 }
 
 template <class I, class O>
-auto fft_plan(const usize (&dims)[1], usize batch) -> FFT& {
+auto fft_plan(const u32 (&dims)[1], u32 batch) -> FFT& {
   struct Key {
-    usize dims[1];
-    usize batch;
+    u32 dims[1];
+    u32 batch;
 
     auto operator==(const Key& other) const -> bool {
       return dims[0] == other.dims[0] && batch == other.batch;
@@ -115,7 +115,7 @@ auto fft_plan(const usize (&dims)[1], usize batch) -> FFT& {
   return val;
 }
 
-template <usize N>
+template <u32 N>
 auto fft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   // check dims
   for (auto i = 0U; i < N; ++i) {
@@ -133,7 +133,7 @@ auto fft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <usize N>
+template <u32 N>
 auto ifft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   // check dims
   for (auto i = 0U; i < N; ++i) {
@@ -149,7 +149,7 @@ auto ifft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <usize N>
+template <u32 N>
 auto fft(math::NdView<f32, N> in, math::NdView<c32, N> out) -> bool {
   // check dims
   if (in._size[0] / 2 + 1 != out._size[0]) {
@@ -168,7 +168,7 @@ auto fft(math::NdView<f32, N> in, math::NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <usize N>
+template <u32 N>
 auto ifft(math::NdView<c32, N> in, math::NdView<f32, N> out) -> bool {
   if (in._size[0] / 2 + 1 != out._size[0]) {
     return false;

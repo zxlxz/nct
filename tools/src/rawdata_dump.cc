@@ -8,9 +8,8 @@ using namespace nct::data;
 void rawdata_dump(Str raw_path, Str out_path) {
   const auto raw_data = RawData::load_file(raw_path);
 
-  const auto nview = raw_data.view_cnt();
-  const auto slice_cnt = raw_data.slice_cnt();
-  const auto det_cnt = raw_data.det_cnt();
+  const auto nview = raw_data.view_cnt;
+  const auto slice_cnt = raw_data.slice_cnt;
 
   auto out_file = fs::File::create(out_path).unwrap();
   for (auto view_idx = 0UL; view_idx < nview; ++view_idx) {
@@ -23,9 +22,9 @@ void rawdata_dump(Str raw_path, Str out_path) {
 
 int main(int argc, const char* argv[]) {
   auto cmd = app::Clap{"rawdata_dump"};
-  cmd.add_flag("h:help", "Print help");
-  cmd.add_arg("i:input", "raw data path", "INPUT");
-  cmd.add_arg("o:output", "output file path", "OUTPUT?");
+  cmd.flag("h:help", "Print help");
+  cmd.arg("i:input", "raw data path", "INPUT");
+  cmd.arg("o:output", "output file path", "OUTPUT?");
 
   if (!cmd.parse_cmdline(argc, argv)) {
     cmd.print_help();

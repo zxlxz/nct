@@ -50,10 +50,10 @@ __global__ void _det_corr_apply_all_gpu(NdView<f32, 3> views,
     return;
   }
 
-  const auto dark = dark_tbl(iu, iv);
-  const auto air = air_tbl(iu, iv);
+  const auto dark = dark_tbl.get(iu, iv);
+  const auto air = air_tbl.get(iu, iv);
 
-  auto ptr = &views(iu, iv, 0);
+  auto ptr = &views[{iu, iv, 0}];
 
   for (auto iw = 0U; iw < nw; ++iw) {
     const auto orig = ptr[iw * views._step[2]];

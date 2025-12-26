@@ -42,9 +42,9 @@ static auto ramp_impulse_response(u32 N, f64 T) -> NdArray<f32, 1> {
 }
 
 auto fdk_make_filter(const Params& p) -> NdArray<f32, 1> {
-  const auto N = math::fft_len(p.det_shape.x * 2);
+  const auto N = math::fft_len(p.det_shape[0] * 2);
   const auto H = N / 2 + 1;
-  const auto T = p.det_pixel.x;
+  const auto T = p.det_pixel[0];
 
   auto h_data = ramp_impulse_response(N, T);
   auto h_ramp = NdArray<c32, 1>::with_shape({H}, Alloc::UMA);
