@@ -3,8 +3,7 @@
 
 namespace nct::math {
 
-namespace {
-using namespace cuda;
+using cuda::fft_plan_t;
 
 class FFT {
   fft_plan_t _plan = -1;
@@ -30,13 +29,13 @@ class FFT {
   }
 
   template <class I, class O>
-  static auto xnew(const u32 (&dims)[1], u32 batch) -> FFT {
+  static auto xnew(const usize (&dims)[1], usize batch) -> FFT {
     if constexpr (trait::same_<I, c32> && trait::same_<O, c32>) {
-      return FFT{fft_plan_c2c(dims, batch)};
+      return FFT{cuda::fft_plan_c2c(dims, batch)};
     } else if constexpr (trait::same_<I, f32> && trait::same_<O, c32>) {
-      return FFT{fft_plan_r2c(dims, batch)};
+      return FFT{cuda::fft_plan_r2c(dims, batch)};
     } else if constexpr (trait::same_<I, c32> && trait::same_<O, f32>) {
-      return FFT{fft_plan_c2r(dims, batch)};
+      return FFT{cuda::fft_plan_c2r(dims, batch)};
     } else {
       static_assert(false, "fft_plan: unsupported type combination");
     }
@@ -46,19 +45,17 @@ class FFT {
   void exec(I* in, O* out, int direction = 0) {
     (void)direction;
     if constexpr (trait::same_<I, c32> && trait::same_<O, c32>) {
-      fft_exec_c2c(_plan, in, out, direction);
+      cuda::fft_exec_c2c(_plan, in, out, direction);
     } else if constexpr (trait::same_<I, f32> && trait::same_<O, c32>) {
-      fft_exec_r2c(_plan, in, out);
+      cuda::fft_exec_r2c(_plan, in, out);
     } else if constexpr (trait::same_<I, c32> && trait::same_<O, f32>) {
-      fft_exec_c2r(_plan, in, out);
+      cuda::fft_exec_c2r(_plan, in, out);
     } else {
       static_assert(false, "fft_exec: unsupported type combination");
     }
   }
 };
-}  // namespace
 
-namespace {
 template <class Key, class Val>
 class KVCache {
   struct Item {
@@ -80,9 +77,8 @@ class KVCache {
     return x.val;
   }
 };
-}  // namespace
 
-auto fft_len(u32 n) -> u32 {
+auto fft_len(usize n) -> usize {
   auto res = 1U;
   while (res < n) {
     res *= 2;
@@ -102,10 +98,10 @@ auto fft_len(u32 n) -> u32 {
 }
 
 template <class I, class O>
-auto fft_plan(const u32 (&dims)[1], u32 batch) -> FFT& {
+auto fft_plan(const usize (&dims)[1], usize batch) -> FFT& {
   struct Key {
-    u32 dims[1];
-    u32 batch;
+    usize dims[1];
+    usize batch;
 
     auto operator==(const Key& other) const -> bool {
       return dims[0] == other.dims[0] && batch == other.batch;
@@ -119,7 +115,7 @@ auto fft_plan(const u32 (&dims)[1], u32 batch) -> FFT& {
   return val;
 }
 
-template <u32 N>
+template <usize N>
 auto fft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   // check dims
   for (auto i = 0U; i < N; ++i) {
@@ -137,7 +133,7 @@ auto fft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <u32 N>
+template <usize N>
 auto ifft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   // check dims
   for (auto i = 0U; i < N; ++i) {
@@ -153,7 +149,7 @@ auto ifft(NdView<c32, N> in, NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <u32 N>
+template <usize N>
 auto fft(math::NdView<f32, N> in, math::NdView<c32, N> out) -> bool {
   // check dims
   if (in._size[0] / 2 + 1 != out._size[0]) {
@@ -172,7 +168,7 @@ auto fft(math::NdView<f32, N> in, math::NdView<c32, N> out) -> bool {
   return true;
 }
 
-template <u32 N>
+template <usize N>
 auto ifft(math::NdView<c32, N> in, math::NdView<f32, N> out) -> bool {
   if (in._size[0] / 2 + 1 != out._size[0]) {
     return false;

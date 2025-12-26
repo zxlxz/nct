@@ -4,6 +4,8 @@
 
 namespace nct::recon {
 
+using namespace nct::cuda;
+
 struct ConeFpGPU {
   f32 SOD;           // source->iso center distance [mm]
   f32 SDD;           // source->detector distance [mm]

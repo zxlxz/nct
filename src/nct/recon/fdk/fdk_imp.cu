@@ -1,7 +1,9 @@
 #include "fdk_imp.h"
-#include "nct/cuda/mod.h"
+#include "nct/cuda/type.h"
 
 namespace nct::recon {
+
+using namespace nct::cuda;
 
 __global__ void _fdk_apply_weight(NdView<f32, 3> views, NdView<f32, 2> weight) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,8 +64,7 @@ void fdk_apply_weight(NdView<f32, 3> views, NdView<f32, 2> weight) {
 void fdk_copy_data(NdView<f32, 2> src, NdView<f32, 2> dst) {
   const auto trds = dim3{16, 16};
   const auto blks = cuda::make_blk(dst._size, trds);
-  const auto zero_pad = (src._size[0] < dst._size[0]);
-  CUDA_RUN(_fdk_copy_data, blks, trds)(src, dst, zero_pad);
+  CUDA_RUN(_fdk_copy_data, blks, trds)(src, dst);
 }
 
 void fdk_mul_filter(NdView<c32, 2> dst, NdView<f32, 1> filter) {

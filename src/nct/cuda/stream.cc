@@ -1,76 +1,77 @@
 #include <cuda_runtime_api.h>
 #include "nct/cuda/stream.h"
+#include "nct/cuda/mem.h"
 
-namespace nct::cuda::detail {
+namespace nct::cuda {
 
 auto event_new() -> event_t {
-  auto evt = event_t{nullptr};
-  if (auto err = cudaEventCreateWithFlags(&evt, cudaEventDisableTiming)) {
+  auto event = event_t{nullptr};
+  if (auto err = cudaEventCreateWithFlags(&event, cudaEventDisableTiming)) {
     throw Error{err};
   }
-  return evt;
+  return event;
 }
 
-void event_del(event_t evt) {
-  if (evt == nullptr) {
+void event_del(event_t event) {
+  if (event == nullptr) {
     return;
   }
 
-  (void)cudaEventDestroy(evt);
+  (void)cudaEventDestroy(event);
 }
 
-void event_wait(event_t evt) {
-  if (evt == nullptr) {
+void event_wait(event_t event) {
+  if (event == nullptr) {
     return;
   }
 
-  if (auto err = cudaEventSynchronize(evt)) {
+  if (auto err = cudaEventSynchronize(event)) {
     throw Error{err};
   }
 }
 
 auto stream_new() -> stream_t {
-  auto strm = stream_t{nullptr};
-  if (auto err = cudaStreamCreate(&strm)) {
+  auto stream = stream_t{nullptr};
+  if (auto err = cudaStreamCreate(&stream)) {
     throw Error{err};
   }
-  return strm;
+  return stream;
 }
 
-void stream_sync(stream_t strm) {
-  if (strm == nullptr) {
+void stream_sync(stream_t stream) {
+  if (stream == nullptr) {
     return;
   }
 
-  if (auto err = cudaStreamSynchronize(strm)) {
-    throw Error{err};
-  }
-}
-
-void stream_del(stream_t strm) {
-  if (strm == nullptr) {
-    return;
-  }
-
-  (void)cudaStreamDestroy(strm);
-}
-
-void stream_wait(stream_t strm, event_t evt) {
-  if (strm == nullptr || evt == nullptr) {
-    return;
-  }
-
-  if (auto err = cudaStreamWaitEvent(strm, evt, 0)) {
+  if (auto err = cudaStreamSynchronize(stream)) {
     throw Error{err};
   }
 }
 
-void stream_record(stream_t strm, event_t evt) {
-  if (strm == nullptr || evt == nullptr) {
+void stream_del(stream_t stream) {
+  if (stream == nullptr) {
     return;
   }
 
-  if (auto err = cudaEventRecord(evt, strm)) {
+  (void)cudaStreamDestroy(stream);
+}
+
+void stream_wait(stream_t stream, event_t event) {
+  if (stream == nullptr || event == nullptr) {
+    return;
+  }
+
+  if (auto err = cudaStreamWaitEvent(stream, event, 0)) {
+    throw Error{err};
+  }
+}
+
+void stream_record(stream_t stream, event_t event) {
+  if (stream == nullptr || event == nullptr) {
+    return;
+  }
+
+  if (auto err = cudaEventRecord(event, stream)) {
     throw Error{err};
   }
 }
@@ -98,4 +99,4 @@ void stream_pop() {
   (void)stack.pop();
 }
 
-}  // namespace nct::cuda::detail
+}  // namespace nct::cuda

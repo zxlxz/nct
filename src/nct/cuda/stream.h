@@ -10,9 +10,6 @@ namespace nct::cuda {
 using event_t = CUevent_st*;
 using stream_t = CUstream_st*;
 
-namespace detail {
-auto err_name(int) -> const char*;
-
 auto event_new() -> event_t;
 void event_del(event_t);
 void event_wait(event_t);
@@ -27,18 +24,16 @@ auto stream_current() -> stream_t;
 void stream_push(stream_t);
 void stream_pop();
 
-}  // namespace detail
-
 class Event {
   friend class Stream;
   event_t _raw = nullptr;
 
  public:
-  explicit Event() : _raw{detail::event_new()} {}
+  explicit Event() : _raw{event_new()} {}
 
   ~Event() noexcept {
     if (_raw != nullptr) {
-      detail::event_del(_raw);
+      event_del(_raw);
     }
   }
 
@@ -56,7 +51,7 @@ class Event {
   }
 
   void wait() {
-    detail::event_wait(_raw);
+    event_wait(_raw);
   }
 };
 
@@ -64,11 +59,11 @@ class Stream {
   stream_t _raw = nullptr;
 
  public:
-  explicit Stream() : _raw{detail::stream_new()} {}
+  explicit Stream() : _raw{cuda::stream_new()} {}
 
   ~Stream() noexcept {
     if (_raw != nullptr) {
-      detail::stream_del(_raw);
+      cuda::stream_del(_raw);
     }
   }
 
@@ -86,24 +81,24 @@ class Stream {
   }
 
   void sync() {
-    detail::stream_sync(_raw);
+    cuda::stream_sync(_raw);
   }
 
   void wait(const Event& evt) {
-    detail::stream_wait(_raw, evt.raw());
+    cuda::stream_wait(_raw, evt.raw());
   }
 
   auto record() -> Event {
     auto evt = Event{};
-    detail::stream_record(_raw, evt.raw());
+    cuda::stream_record(_raw, evt.raw());
     return evt;
   }
 
  public:
   void run(auto& f) {
-    detail::stream_push(_raw);
+    cuda::stream_push(_raw);
     f();
-    detail::stream_pop();
+    cuda::stream_pop();
   }
 };
 

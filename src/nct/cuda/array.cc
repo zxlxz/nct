@@ -1,11 +1,12 @@
 #include <cuda_runtime_api.h>
 #include <channel_descriptor.h>
 #include "nct/cuda/array.h"
+#include "nct/cuda/stream.h"
 
-namespace nct::cuda::detail {
+namespace nct::cuda {
 
 template <class T>
-auto arr_new(const size_t (&size)[3], u32 flags) -> arr_t {
+auto array_new(const size_t (&size)[3], u32 flags) -> arr_t {
   const auto fmt = cudaCreateChannelDesc<T>();
   const auto ext = cudaExtent{size[0], size[1], size[2]};
 
@@ -18,7 +19,7 @@ auto arr_new(const size_t (&size)[3], u32 flags) -> arr_t {
   return res;
 }
 
-void arr_del(arr_t arr) {
+void array_del(arr_t arr) {
   if (!arr) {
     return;
   }
@@ -28,27 +29,31 @@ void arr_del(arr_t arr) {
   }
 }
 
-template <class T>
-void arr_set(arr_t arr, const T* src, const size_t (&size)[3]) {
+void array_set(arr_t arr, const void* src) {
   if (arr == nullptr || src == nullptr) {
     return;
   }
-  if (size[0] == 0 || size[1] == 0 || size[2] == 0) {
-    return;
+
+  auto format = cudaChannelFormatDesc{};
+  auto extent = cudaExtent{};
+  auto flags = 0;
+  if (auto err = cudaArrayGetInfo(&format, &extent, &flags, arr)) {
+    throw cuda::Error{err};
   }
 
-  const auto ext = cudaExtent{size[0], size[1], size[2]};
+  const auto type_size = (format.x + format.y + format.z + format.w) / 8;
+
   const auto src_ptr = cudaPitchedPtr{
-      .ptr = src,
-      .pitch = size[0] * sizeof(T),
-      .xsize = size[0],
-      .ysize = size[1] * size[2],
+      .ptr = const_cast<void*>(src),
+      .pitch = extent.width * type_size,
+      .xsize = extent.width,
+      .ysize = extent.height * extent.depth,
   };
 
   const auto params = cudaMemcpy3DParms{
       .srcPtr = src_ptr,
       .dstArray = arr,
-      .extent = ext,
+      .extent = extent,
       .kind = cudaMemcpyDefault,
   };
 
@@ -59,32 +64,35 @@ void arr_set(arr_t arr, const T* src, const size_t (&size)[3]) {
   }
 }
 
-auto tex_new(arr_t arr, int filt_mode, int addr_mode) -> tex_t {
+auto texture_new(arr_t arr, int filt_mode, int addr_mode) -> tex_t {
   if (!arr) {
     return tex_t{0};
   }
 
-  const auto res_desc = cudaResourceDesc{
+  auto tex_addr = cudaTextureAddressMode(addr_mode);
+  auto tex_filt = cudaTextureFilterMode(filt_mode);
+
+  const auto tex_res = cudaResourceDesc{
       .resType = cudaResourceTypeArray,
       .res = {.array = {.array = arr}},
   };
 
   const auto tex_desc = cudaTextureDesc{
-      .addressMode = {addr_mode, addr_mode, addr_mode},
-      .filterMode = filt_mode,
+      .addressMode = {tex_addr, tex_addr, tex_addr},
+      .filterMode = tex_filt,
       .readMode = cudaReadModeElementType,
       .normalizedCoords = 0,
   };
 
   auto tex = cudaTextureObject_t{0};
-  if (auto err = cudaCreateTextureObject(&tex, &res_desc, &tex_desc, nullptr)) {
+  if (auto err = cudaCreateTextureObject(&tex, &tex_res, &tex_desc, nullptr)) {
     throw cuda::Error{err};
   }
 
   return tex;
 }
 
-void tex_del(tex_t obj) {
+void texture_del(tex_t obj) {
   if (!obj) {
     return;
   }
@@ -94,4 +102,4 @@ void tex_del(tex_t obj) {
   }
 }
 
-}  // namespace nct::cuda::detail
+}  // namespace nct::cuda

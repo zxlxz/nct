@@ -5,6 +5,8 @@
 
 namespace nct::corr {
 
+using namespace nct::cuda;
+
 struct Coeffs {
   f32 _ptr[8];
   u32 _len;
@@ -37,7 +39,7 @@ struct Coeffs {
 __global__ void _det_corr_apply_all_gpu(NdView<f32, 3> views,
                                         NdView<f32, 2> dark_tbl,
                                         NdView<f32, 2> air_tbl,
-                                        Coeffs        coeffs) {
+                                        Coeffs coeffs) {
   const auto iu = blockIdx.x * blockDim.x + threadIdx.x;
   const auto iv = blockIdx.y * blockDim.y + threadIdx.y;
   const auto nu = views._size[0];

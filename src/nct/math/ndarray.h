@@ -7,7 +7,7 @@ namespace nct::math {
 
 using cuda::Alloc;
 
-template <class T, u32 N = 1, class A = Alloc>
+template <class T, usize N = 1, class A = Alloc>
 class NdArray {
   NdView<T, N> _view{};
   A _a{};
@@ -22,8 +22,8 @@ class NdArray {
   NdArray(const NdArray&) = delete;
   NdArray& operator=(const NdArray&) = delete;
 
-  static auto with_shape(const u32 (&dims)[N], A a = A{}) -> NdArray {
-    u32 step[N] = {1U};
+  static auto with_shape(const usize (&dims)[N], A a = A{}) -> NdArray {
+    usize step[N] = {1U};
     for (auto i = 0U; i < N; ++i) {
       step[i] = i == 0 ? 1 : step[i - 1] * dims[i - 1];
     }
@@ -46,11 +46,11 @@ class NdArray {
     return _view._data;
   }
 
-  auto size() const -> const u32 (&)[N] {
+  auto size() const -> const usize (&)[N] {
     return _view._size;
   }
 
-  auto numel() const -> u32 {
+  auto numel() const -> usize {
     return _view.numel();
   }
 
@@ -65,19 +65,19 @@ class NdArray {
   }
 
  public:
-  inline auto operator[](u32 idx) const -> T {
+  inline auto operator[](usize idx) const -> T {
     return _view._data[idx];
   }
 
-  inline auto operator[](u32 idx) -> T& {
+  inline auto operator[](usize idx) -> T& {
     return _view._data[idx];
   }
 
-  inline auto operator[](const u32 (&idxs)[N]) const -> T {
+  inline auto operator[](const usize (&idxs)[N]) const -> T {
     return _view[idxs];
   }
 
-  inline auto operator[](const u32 (&idxs)[N]) -> T& {
+  inline auto operator[](const usize (&idxs)[N]) -> T& {
     return _view[idxs];
   }
 
@@ -103,7 +103,7 @@ class NdArray {
 #endif
 };
 
-template <class T, u32 N>
+template <class T, usize N>
 void fill(NdView<T, N> view, T val) {
   const auto n = view.numel();
   if (val == 0) {

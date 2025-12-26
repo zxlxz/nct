@@ -1,8 +1,9 @@
 #include <cuda_runtime_api.h>
-#include <channel_descriptor.h>
 #include "nct/cuda/mem.h"
+#include "nct/cuda/device.h"
+#include "nct/cuda/stream.h"
 
-namespace nct::cuda::detail {
+namespace nct::cuda {
 
 auto err_name(int code) -> const char* {
   const auto name = cudaGetErrorName(static_cast<cudaError_t>(code));
@@ -107,4 +108,4 @@ void copy_bytes(const void* src, void* dst, size_t size) {
   }
 }
 
-}  // namespace nct::cuda::detail
+}  // namespace nct::cuda

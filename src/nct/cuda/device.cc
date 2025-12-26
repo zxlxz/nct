@@ -1,6 +1,7 @@
 #include <cuda_runtime_api.h>
 #include "nct/cuda/device.h"
 #include "nct/cuda/stream.h"
+#include "nct/cuda/mem.h"
 
 namespace nct::cuda {
 

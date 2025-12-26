@@ -10,19 +10,6 @@ namespace nct::cuda {
 using arr_t = struct ::cudaArray*;
 using tex_t = unsigned long long;
 
-namespace detail {
-template <class T>
-auto arr_new(const size_t (&size)[3], u32 flags = 0) -> arr_t;
-
-void arr_del(arr_t arr);
-
-template <class T>
-void arr_set(arr_t arr, const T* src, const size_t (&size)[3]);
-
-auto tex_new(arr_t arr, int filt_mode, int addr_mode) -> tex_t;
-void tex_del(tex_t obj);
-}  // namespace detail
-
 enum class AddrMode {
   Wrap = 0,    // 0
   Clamp = 1,   // 1
@@ -35,24 +22,32 @@ enum class FiltMode {
   Linear = 1,
 };
 
-template <class T, u32 N>
+template <class T>
+auto array_new(const size_t (&size)[3], unsigned flags = 0) -> arr_t;
+void array_del(arr_t arr);
+void array_set(arr_t arr, const void* src);
+
+auto texture_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t;
+void texture_del(tex_t obj);
+
+template <class T, unsigned N>
 class Array {
   static_assert(N >= 1 && N <= 3, "Array only supports 1D, 2D, and 3D.");
 
  public:
   arr_t _arr = nullptr;
   tex_t _tex = 0;
-  u32 _size[N] = {0};
+  size_t _size[N] = {0};
 
  public:
   Array() noexcept = default;
 
   ~Array() noexcept {
     if (_tex != 0) {
-      detail::tex_del(_tex);
+      cuda::texture_del(_tex);
     }
     if (_arr != nullptr) {
-      detail::arr_del(_arr);
+      cuda::array_del(_arr);
     }
   }
 
@@ -69,7 +64,7 @@ class Array {
   static auto with_shape(const size_t (&size)[N]) -> Array {
     const size_t fixed_size[3] = {size[0], N > 1 ? size[1] : 1, N > 2 ? size[2] : 1};
     auto res = Array{};
-    res._arr = detail::arr_new<T>(fixed_size, 0);
+    res._arr = cuda::array_new<T>(fixed_size, 0);
     for (u32 i = 0; i < N; ++i) {
       res._size[i] = static_cast<u32>(size[i]);
     }
@@ -84,19 +79,19 @@ class Array {
 
   void assign(math::NdView<T, N> src) {
     const size_t size[3] = {_size[0], N > 1 ? _size[1] : 1, N > 2 ? _size[2] : 1};
-    detail::arr_set<T>(_arr, src._data, size);
+    cuda::array_set(_arr, src._data);
   }
 
   auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) -> tex_t {
     if (_tex != 0) {
-      detail::tex_del(_tex);
+      cuda::texture_del(_tex);
     }
-    _tex = detail::tex_new(_arr, filt_mode, addr_mode);
+    _tex = cuda::texture_new(_arr, filt_mode, addr_mode);
     return _tex;
   }
 };
 
-template <class T, u32 N>
+template <class T, unsigned N>
 class LayeredArray {
   static_assert(N >= 1 && N <= 3, "Array only supports 1D, 2D, and 3D.");
 
@@ -110,10 +105,10 @@ class LayeredArray {
 
   ~LayeredArray() noexcept {
     if (_tex != 0) {
-      detail::tex_del(_tex);
+      cuda::texture_del(_tex);
     }
     if (_arr != nullptr) {
-      detail::arr_del(_arr);
+      cuda::array_del(_arr);
     }
   }
 
@@ -130,7 +125,7 @@ class LayeredArray {
   static auto with_shape(size_t layers, const size_t (&size)[N - 1]) -> LayeredArray {
     const size_t fixed_size[3] = {size[0], N > 2 ? size[1] : 1, layers};
     auto res = LayeredArray{};
-    res._arr = detail::arr_new<T>(fixed_size, 1);
+    res._arr = cuda::array_new<T>(fixed_size, 1);
     for (u32 i = 0; i < N - 1; ++i) {
       res._size[i] = static_cast<u32>(size[i]);
     }
@@ -140,9 +135,9 @@ class LayeredArray {
 
   auto tex(FiltMode filt_mode = FiltMode::Point, AddrMode addr_mode = AddrMode::Clamp) -> tex_t {
     if (_tex != 0) {
-      detail::tex_del(_tex);
+      cuda::texture_del(_tex);
     }
-    _tex = detail::tex_new(_arr, filt_mode, addr_mode);
+    _tex = cuda::texture_new(_arr, static_cast<int>(filt_mode), static_cast<int>(addr_mode));
     return _tex;
   }
 };
