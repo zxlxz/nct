@@ -1,19 +1,17 @@
 #pragma once
 
-#ifndef __hd__
-#ifdef __host__
-#define __hd__ __host__ __device__
-#else
-#define __hd__
-#endif
-#endif
+#include "nct/core.h"
 
 namespace nct::math {
 
 using u32 = unsigned;
 
 template <class T, u32 N = 1>
-struct NdView;
+struct NdView {
+  T* _data = nullptr;
+  u32 _size[N] = {0};
+  u32 _step[N] = {0};
+};
 
 template <class T>
 struct NdView<T, 1> {
@@ -22,40 +20,27 @@ struct NdView<T, 1> {
   u32 _step[1] = {0};
 
  public:
-  __hd__ NdView() noexcept = default;
+  NdView() noexcept = default;
 
-  __hd__ NdView(T* data, u32 size) noexcept : _data{data}, _size{size}, _step{1} {}
+  NdView(T* data, const u32 (&size)[1], const u32 (&step)[1]) noexcept : _data{data}, _size{size[0]}, _step{step[0]} {}
 
-  __hd__ NdView(T* data, const u32 (&size)[1], const u32 (&step)[1]) noexcept
-      : _data(data)
-      , _size{size[0]}
-      , _step{step[0]} {}
-
-  __hd__ auto numel() const noexcept -> u32 {
+ public:
+  auto numel() const noexcept -> u32 {
     return _size[0];
   }
 
-  __hd__ auto in_bounds(u32 x) const noexcept -> bool {
+  auto in_bounds(u32 x) const noexcept -> bool {
     return x < _size[0];
   }
 
-  __hd__ auto get(u32 idx) const noexcept -> T {
-    return _data[idx * _step[0]];
+  auto operator[](u32 x) const noexcept -> T {
+    return _data[x * _step[0]];
   }
 
-  __hd__ void set(u32 idx, T val) noexcept {
-    _data[idx * _step[0]] = val;
+  auto operator[](u32 x) noexcept -> T& {
+    return _data[x * _step[0]];
   }
 
-  __hd__ auto operator[](u32 idx) const noexcept -> T {
-    return _data[idx * _step[0]];
-  }
-
-  __hd__ auto operator[](u32 idx) noexcept -> T& {
-    return _data[idx * _step[0]];
-  }
-
- public:
   auto is_continuous() const noexcept -> bool {
     return _step[0] == 1;
   }
@@ -63,125 +48,131 @@ struct NdView<T, 1> {
 
 template <class T>
 struct NdView<T, 2> {
+  static constexpr auto NDIM = 2u;
   T* _data = nullptr;
-  u32 _size[2] = {0};
-  u32 _step[2] = {0};
+  u32 _size[NDIM] = {0};
+  u32 _step[NDIM] = {0};
 
  public:
-  __hd__ NdView() noexcept = default;
+  NdView() noexcept = default;
 
-  __hd__ NdView(T* data, const u32 (&size)[2], const u32 (&step)[2]) noexcept
-      : _data(data)
+  NdView(T* data, const u32 (&size)[NDIM], const u32 (&step)[NDIM]) noexcept
+      : _data{data}
       , _size{size[0], size[1]}
       , _step{step[0], step[1]} {}
 
-  __hd__ auto numel() const noexcept -> u32 {
+ public:
+  auto numel() const noexcept -> u32 {
     return _size[0] * _size[1];
   }
 
-  __hd__ auto in_bounds(u32 x, u32 y) const noexcept -> bool {
-    return (x < _size[0]) && (y < _size[1]);
+  auto in_bounds(u32 x, u32 y) const noexcept -> bool {
+    return x < _size[0] && y < _size[1];
   }
 
-  __hd__ auto get(u32 x, u32 y) const noexcept -> T {
+  auto operator[](u32 x, u32 y) const noexcept -> T {
     return _data[x * _step[0] + y * _step[1]];
   }
 
-  __hd__ void set(u32 x, u32 y, T val) noexcept {
-    _data[x * _step[0] + y * _step[1]] = val;
+  auto operator[](u32 x, u32 y) noexcept -> T& {
+    return _data[x * _step[0] + y * _step[1]];
   }
 
-  __hd__ auto operator[](const u32 (&idxs)[2]) const noexcept -> T {
-    return _data[idxs[0] * _step[0] + idxs[1] * _step[1]];
+  auto slice(const u32 (&idxs)[2], const u32 (&size)[2]) noexcept -> NdView<T, 2> {
+    auto offset = idxs[0] * _step[0] + idxs[1] * _step[1];
+    return {_data + offset, size, _step};
   }
 
-  __hd__ auto operator[](const u32 (&idxs)[2]) noexcept -> T& {
-    return _data[idxs[0] * _step[0] + idxs[1] * _step[1]];
-  }
-
- public:
-  __hd__ auto slice(const u32 (&idxs)[2], const u32 (&size)[2]) noexcept -> NdView<T, 2> {
-    const auto data = _data + idxs[0] * _step[0] + idxs[1] * _step[1];
-    return {data, size, _step};
-  }
-
-  template <u32 I>
-  __hd__ auto slice_at(u32 idx) noexcept -> NdView<T, 1> {
-    if constexpr (I == 0) {
-      return {_data + idx * _step[0], {_size[1]}, {_step[1]}};
-    } else if constexpr (I == 1) {
-      return {_data + idx * _step[1], {_size[0]}, {_step[0]}};
-    } else {
-      static_assert(I < 2, "I out of range");
+  auto select(u32 dim, u32 idx) noexcept -> NdView<T, NDIM - 1> {
+    auto res = NdView<T, NDIM - 1>{};
+    for (auto i = 0u, j = 0u; j < NDIM; ++i) {
+      if (i == dim) {
+        res._data = _data + idx * _step[i];
+        continue;
+      } else {
+        res._size[j] = _size[i];
+        res._step[j] = _step[i];
+        ++j;
+      }
     }
+    return res;
   }
 
- public:
   auto is_continuous() const noexcept -> bool {
-    return _step[0] == 1 && _step[1] == _size[0];
+    if (_step[0] != 1) {
+      return false;
+    }
+    for (auto i = 1u; i < NDIM - 1; ++i) {
+      if (_step[i] != _size[i + 1] * _step[i + 1]) {
+        return false;
+      }
+    }
+    return true;
   }
 };
 
 template <class T>
 struct NdView<T, 3> {
+  static constexpr auto NDIM = 3u;
   T* _data = nullptr;
-  u32 _size[3] = {0};
-  u32 _step[3] = {0};
+  u32 _size[NDIM] = {0};
+  u32 _step[NDIM] = {0};
 
  public:
-  __hd__ NdView() noexcept = default;
+  NdView() noexcept = default;
 
-  __hd__ NdView(T* data, const u32 (&size)[3], const u32 (&step)[3]) noexcept
-      : _data(data)
+  NdView(T* data, const u32 (&size)[NDIM], const u32 (&step)[NDIM]) noexcept
+      : _data{data}
       , _size{size[0], size[1], size[2]}
       , _step{step[0], step[1], step[2]} {}
 
-  __hd__ auto numel() const noexcept -> u32 {
+ public:
+  auto numel() const noexcept -> u32 {
     return _size[0] * _size[1] * _size[2];
   }
 
-  __hd__ auto in_bounds(u32 x, u32 y, u32 z) const noexcept -> bool {
-    return (x < _size[0]) && (y < _size[1]) && (z < _size[2]);
+  auto in_bounds(u32 x, u32 y, u32 z) const noexcept -> bool {
+    return x < _size[0] && y < _size[1] && z < _size[2];
   }
 
-  __hd__ auto get(u32 x, u32 y, u32 z) const noexcept -> T {
+  auto operator[](u32 x, u32 y, u32 z) const noexcept -> T {
     return _data[x * _step[0] + y * _step[1] + z * _step[2]];
   }
 
-  __hd__ void set(u32 x, u32 y, u32 z, T val) noexcept {
-    _data[x * _step[0] + y * _step[1] + z * _step[2]] = val;
+  auto operator[](u32 x, u32 y, u32 z) noexcept -> T& {
+    return _data[x * _step[0] + y * _step[1] + z * _step[2]];
   }
 
-  __hd__ auto operator[](const u32 (&idxs)[3]) const noexcept -> T {
-    return _data[idxs[0] * _step[0] + idxs[1] * _step[1] + idxs[2] * _step[2]];
-  }
-
-  __hd__ auto operator[](const u32 (&idxs)[3]) noexcept -> T& {
-    return _data[idxs[0] * _step[0] + idxs[1] * _step[1] + idxs[2] * _step[2]];
-  }
-
- public:
   auto slice(const u32 (&idxs)[3], const u32 (&size)[3]) noexcept -> NdView<T, 3> {
-    const auto data = _data + idxs[0] * _step[0] + idxs[1] * _step[1] + idxs[2] * _step[2];
-    return {data, size, _step};
+    auto offset = idxs[0] * _step[0] + idxs[1] * _step[1] + idxs[2] * _step[2];
+    return {_data + offset, size, _step};
   }
 
-  template <u32 I>
-  auto slice_at(u32 idx) noexcept -> NdView<T, 2> {
-    if constexpr (I == 0) {
-      return {_data + idx * _step[0], {_size[1], _size[2]}, {_step[1], _step[2]}};
-    } else if constexpr (I == 1) {
-      return {_data + idx * _step[1], {_size[0], _size[2]}, {_step[0], _step[2]}};
-    } else if constexpr (I == 2) {
-      return {_data + idx * _step[2], {_size[0], _size[1]}, {_step[0], _step[1]}};
-    } else {
-      static_assert(I < 3, "DIM out of range");
+  auto select(u32 dim, u32 idx) noexcept -> NdView<T, NDIM - 1> {
+    auto res = NdView<T, NDIM - 1>{};
+    for (auto i = 0u, j = 0u; j < NDIM; ++i) {
+      if (i == dim) {
+        res._data = _data + idx * _step[i];
+        continue;
+      } else {
+        res._size[j] = _size[i];
+        res._step[j] = _step[i];
+        ++j;
+      }
     }
+    return res;
   }
 
- public:
   auto is_continuous() const noexcept -> bool {
-    return _step[0] == 1 && _step[1] == _size[0] && _step[2] == _size[0] * _size[1];
+    if (_step[0] != 1) {
+      return false;
+    }
+    for (auto i = 1u; i < NDIM - 1; ++i) {
+      if (_step[i] != _size[i + 1] * _step[i + 1]) {
+        return false;
+      }
+    }
+    return true;
   }
 };
 

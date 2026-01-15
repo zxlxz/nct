@@ -4,32 +4,6 @@
 
 namespace nct::cuda {
 
-auto event_new() -> event_t {
-  auto event = event_t{nullptr};
-  if (auto err = cudaEventCreateWithFlags(&event, cudaEventDisableTiming)) {
-    throw Error{err};
-  }
-  return event;
-}
-
-void event_del(event_t event) {
-  if (event == nullptr) {
-    return;
-  }
-
-  (void)cudaEventDestroy(event);
-}
-
-void event_wait(event_t event) {
-  if (event == nullptr) {
-    return;
-  }
-
-  if (auto err = cudaEventSynchronize(event)) {
-    throw Error{err};
-  }
-}
-
 auto stream_new() -> stream_t {
   auto stream = stream_t{nullptr};
   if (auto err = cudaStreamCreate(&stream)) {
@@ -54,26 +28,6 @@ void stream_del(stream_t stream) {
   }
 
   (void)cudaStreamDestroy(stream);
-}
-
-void stream_wait(stream_t stream, event_t event) {
-  if (stream == nullptr || event == nullptr) {
-    return;
-  }
-
-  if (auto err = cudaStreamWaitEvent(stream, event, 0)) {
-    throw Error{err};
-  }
-}
-
-void stream_record(stream_t stream, event_t event) {
-  if (stream == nullptr || event == nullptr) {
-    return;
-  }
-
-  if (auto err = cudaEventRecord(event, stream)) {
-    throw Error{err};
-  }
 }
 
 auto stream_stack() -> Vec<stream_t>& {

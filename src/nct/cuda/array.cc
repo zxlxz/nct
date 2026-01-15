@@ -33,7 +33,7 @@ void array_del(arr_t arr) {
   }
 }
 
-void array_ext(arr_t arr, u32 ndim, u32 (&size)[3]) {
+void array_ext(arr_t arr, u32 (&size)[3]) {
   if (arr == nullptr) {
     return;
   }
@@ -45,15 +45,9 @@ void array_ext(arr_t arr, u32 ndim, u32 (&size)[3]) {
     throw cuda::Error{err};
   }
 
-  if (ndim > 0) {
-    size[0] = static_cast<u32>(extent.width);
-  }
-  if (ndim > 1) {
-    size[1] = static_cast<u32>(extent.height);
-  }
-  if (ndim > 2) {
-    size[2] = static_cast<u32>(extent.depth);
-  }
+  size[0] = static_cast<u32>(extent.width);
+  size[1] = static_cast<u32>(extent.height);
+  size[2] = static_cast<u32>(extent.depth);
 }
 
 void array_set(arr_t arr, const void* src) {
@@ -81,7 +75,7 @@ void array_set(arr_t arr, const void* src) {
       .srcPtr = src_ptr,
       .dstArray = arr,
       .extent = extent,
-      .kind = cudaMemcpyDefault,
+      .kind = cudaMemcpyHostToDevice,
   };
 
   const auto stream = cuda::stream_current();
@@ -116,7 +110,7 @@ auto texture_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t {
     throw cuda::Error{err};
   }
 
-  return tex;
+  return reinterpret_cast<tex_t>(tex);
 }
 
 void texture_del(tex_t obj) {

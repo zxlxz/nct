@@ -1,5 +1,6 @@
 #include "nct/math.h"
 #include "nct/cuda.h"
+#include "nct/cuda/type.cuh"
 #include "nct/recon/algos/cone_.h"
 
 namespace nct::recon {
@@ -135,8 +136,7 @@ auto cone_fp(const Params& p, NdView<f32, 3> vol, u32 nproj) -> NdArray<f32, 3> 
 
   // run
   const auto trds = dim3{8, 8, 8};
-  const auto blks = cuda::make_blk(views_shape, trds);
-  CUDA_RUN(_cone_fp_gpu, blks, trds)(gpu_params, *srcs, vol_tex, *views);
+  CUDA_RUN(_cone_fp_gpu, views_shape, trds)(gpu_params, *srcs, vol_tex, *views);
 
   return views;
 }

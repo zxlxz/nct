@@ -13,11 +13,12 @@ auto fdk_make_weight(const Params& p) -> NdArray<f32, 2> {
 
   auto res = NdArray<f32, 2>::with_shape({nu, nv}, Alloc::UMA);
 
+  auto m = *res;
   for (auto iv = 0U; iv < nv; iv++) {
     for (auto iu = 0U; iu < nu; iu++) {
       const auto [u, v] = p.det_pos(iu, iv);
       const auto w = cone_beam_weight(p, u, v);
-      res[{iu, iv}] = static_cast<f32>(w);
+      m[iu, iv] = static_cast<f32>(w);
     }
   }
   return res;
@@ -74,7 +75,7 @@ void fdk_apply_filter(NdView<f32, 3> views, NdView<f32, 1> filter) {
   auto fft_view = *fft_data;
 
   for (auto i_proj = 0U; i_proj < n_proj; ++i_proj) {
-    auto view = views.slice_at<2>(i_proj);
+    auto view = views.select(2, i_proj);
     fdk_copy_data(view, pad_view);
     math::fft(pad_view, fft_view);
     fdk_mul_filter(fft_view, filter);

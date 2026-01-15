@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nct/corr/det_corr_imp.h"
-#include "nct/cuda.h"
+#include "nct/cuda/type.cuh"
 
 namespace nct::corr {
 
@@ -72,8 +72,7 @@ void det_corr_apply_all_gpu(NdView<f32, 3> views,
   const auto coeffs = Coeffs::from(coeffs_tbl);
 
   const auto trds = cuda::dim3{8, 8, 1};
-  const auto blks = cuda::make_blk(views._size, trds);
-  CUDA_RUN(_det_corr_apply_all_gpu, blks, trds)(views, dark_tbl, air_tbl, coeffs);
+  CUDA_RUN(_det_corr_apply_all_gpu, views._size, trds)(views, dark_tbl, air_tbl, coeffs);
 }
 
 }  // namespace nct::corr

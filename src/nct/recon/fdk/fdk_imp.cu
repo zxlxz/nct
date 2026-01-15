@@ -57,20 +57,17 @@ __global__ void _fdk_apply_filter(NdView<c32, 2> dst, NdView<f32, 1> filter) {
 
 void fdk_apply_weight(NdView<f32, 3> views, NdView<f32, 2> weight) {
   const auto trds = dim3{16, 16};
-  const auto blks = cuda::make_blk(views._size, trds);
-  CUDA_RUN(_fdk_apply_weight, blks, trds)(views, weight);
+  CUDA_RUN(_fdk_apply_weight, views._size, trds)(views, weight);
 }
 
 void fdk_copy_data(NdView<f32, 2> src, NdView<f32, 2> dst) {
   const auto trds = dim3{16, 16};
-  const auto blks = cuda::make_blk(dst._size, trds);
-  CUDA_RUN(_fdk_copy_data, blks, trds)(src, dst);
+  CUDA_RUN(_fdk_copy_data, dst._size, trds)(src, dst);
 }
 
 void fdk_mul_filter(NdView<c32, 2> dst, NdView<f32, 1> filter) {
   const auto trds = dim3{16, 16};
-  const auto blks = cuda::make_blk(dst._size, trds);
-  CUDA_RUN(_fdk_apply_filter, blks, trds)(dst, filter);
+  CUDA_RUN(_fdk_apply_filter, dst._size, trds)(dst, filter);
 }
 
 }  // namespace nct::recon

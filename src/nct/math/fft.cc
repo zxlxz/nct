@@ -73,8 +73,8 @@ class KVCache {
       }
     }
 
-    auto& x = _buff.push(Item{key, f()});
-    return x.val;
+    _buff.push(Item{key, f()});
+    return _buff.last_mut()->val;
   }
 };
 

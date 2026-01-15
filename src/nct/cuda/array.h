@@ -1,6 +1,5 @@
 #pragma once
 
-#include "nct/cuda/type.h"
 #include "nct/math/ndarray.h"
 
 struct cudaArray;
@@ -26,10 +25,22 @@ template <class T>
 auto array_new(u32 ndim, const u32 (&size)[3], u32 flags = 0) -> arr_t;
 void array_del(arr_t arr);
 void array_set(arr_t arr, const void* src);
-void array_ext(arr_t arr, u32 ndim, u32 (&size)[3]);
+void array_ext(arr_t arr, u32 (&size)[3]);
 
 auto texture_new(arr_t arr, FiltMode filt_mode, AddrMode addr_mode) -> tex_t;
 void texture_del(tex_t obj);
+
+template <class T, unsigned N>
+struct Tex {
+  tex_t _tex = 0;
+  unsigned _size[N] = {};
+};
+
+template <class T, unsigned N>
+struct LTex {
+  tex_t _tex = 0;
+  unsigned _size[N] = {};
+};
 
 template <class T, unsigned N>
 class Array {
@@ -83,7 +94,7 @@ class Array {
     }
 
     auto res = cuda::Tex<T, N>{._tex = _tex};
-    cuda::array_ext(_arr, N, res._size);
+    cuda::array_ext(_arr, res._size);
     return res;
   }
 };

@@ -5,21 +5,44 @@
 #define __global__
 #endif
 
+#ifndef __CUDACC__
+struct dim3 {
+  unsigned x, y, z;
+};
+static const auto blockIdx = dim3{1, 1, 1};
+static const auto threadIdx = dim3{1, 1, 1};
+static const auto blockDim = dim3{1, 1, 1};
+static const auto gridDim = dim3{1, 1, 1};
+#endif
+
 namespace nct::cuda {
 
+using u32 = unsigned;
 using tex_t = unsigned long long;
 
-#ifndef __host__
 struct dim3 {
-  unsigned x = 1;
-  unsigned y = 1;
-  unsigned z = 1;
+  u32 x = 1;
+  u32 y = 1;
+  u32 z = 1;
+
+ public:
+  dim3(u32 x, u32 y = 1, u32 z = 1) : x{x}, y{y}, z{z} {}
+
+  dim3(const u32 (&s)[3]) : x{s[0]}, y{s[1]}, z{s[2]} {}
+
+  operator ::dim3() const {
+    return {x, y, z};
+  }
+
+  auto operator%(const dim3& ntrd) const -> dim3 {
+    const auto blk_size = dim3{
+        (x + ntrd.x - 1) / ntrd.x,
+        (y + ntrd.y - 1) / ntrd.y,
+        (z + ntrd.z - 1) / ntrd.z,
+    };
+    return blk_size;
+  }
 };
-static const auto blockIdx = cuda::dim3{1, 1, 1};
-static const auto threadIdx = cuda::dim3{1, 1, 1};
-static const auto blockDim = cuda::dim3{1, 1, 1};
-static const auto gridDim = cuda::dim3{1, 1, 1};
-#endif
 
 template <class T, unsigned N>
 struct Tex;
@@ -84,23 +107,9 @@ struct LTex<T, 3> {
   }
 };
 
-template <class T, unsigned N>
-static auto make_blk(const T (&dim)[N], const dim3& trd) -> dim3 {
-  static_assert(N <= 3, "nct::cuda::make_blk: N out of range(max 3)");
-  auto res = dim3{1U, 1U, 1U};
-  if constexpr (N > 0) {
-    res.x = (dim[0] + trd.x - 1) / trd.x;
-  } else if constexpr (N > 1) {
-    res.y = (dim[1] + trd.y - 1) / trd.y;
-  } else if constexpr (N > 2) {
-    res.z = (dim[2] + trd.z - 1) / trd.z;
-  }
-  return res;
-}
-
-static void conf_exec(const auto& blks, const auto& trds) {
-  (void)blks;
-  (void)trds;
+void conf_exec(dim3 work_size, dim3 blk_size) {
+  (void)work_size;
+  (void)blk_size;
 }
 
 }  // namespace nct::cuda
