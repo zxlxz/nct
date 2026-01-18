@@ -1,4 +1,4 @@
-#include <cuda_runtime_api.h>
+#include <cuda.h>
 #include "nct/cuda/stream.h"
 #include "nct/cuda/mem.h"
 
@@ -6,7 +6,7 @@ namespace nct::cuda {
 
 auto stream_new() -> stream_t {
   auto stream = stream_t{nullptr};
-  if (auto err = cudaStreamCreate(&stream)) {
+  if (auto err = cuStreamCreate(&stream, 0)) {
     throw Error{err};
   }
   return stream;
@@ -17,7 +17,7 @@ void stream_sync(stream_t stream) {
     return;
   }
 
-  if (auto err = cudaStreamSynchronize(stream)) {
+  if (auto err = cuStreamSynchronize(stream)) {
     throw Error{err};
   }
 }
@@ -27,7 +27,7 @@ void stream_del(stream_t stream) {
     return;
   }
 
-  (void)cudaStreamDestroy(stream);
+  (void)cuStreamDestroy(stream);
 }
 
 auto stream_stack() -> Vec<stream_t>& {

@@ -17,7 +17,15 @@ static const auto gridDim = dim3{1, 1, 1};
 
 namespace nct::cuda {
 
+using i16 = short;
+using u16 = unsigned short;
+
+using i32 = int;
 using u32 = unsigned;
+
+using f32 = float;
+using f64 = double;
+
 using tex_t = unsigned long long;
 
 struct dim3 {

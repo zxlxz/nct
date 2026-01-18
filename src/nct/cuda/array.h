@@ -2,11 +2,11 @@
 
 #include "nct/math/ndarray.h"
 
-struct cudaArray;
+struct CUarray_st;
 
 namespace nct::cuda {
 
-using arr_t = struct ::cudaArray*;
+using arr_t = struct ::CUarray_st*;
 using tex_t = unsigned long long;
 
 enum class AddrMode {

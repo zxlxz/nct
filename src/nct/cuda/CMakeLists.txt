@@ -2,9 +2,9 @@
 find_package(CUDAToolkit)
 if (CUDAToolkit_FOUND)
   include_directories(${CUDAToolkit_INCLUDE_DIRS})
-  link_libraries(CUDA::cudart CUDA::cufft)
+  link_libraries(CUDA::cuda CUDA::cufft)
 else()
-  link_libraries(cuda cudart)
+  link_libraries(cuda)
   link_libraries("-framework Metal" "-framework Foundation")
 endif()
 

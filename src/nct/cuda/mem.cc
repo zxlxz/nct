@@ -1,19 +1,24 @@
-#include <cuda_runtime_api.h>
+#include <cuda.h>
 #include "nct/cuda/mem.h"
 #include "nct/cuda/device.h"
 #include "nct/cuda/stream.h"
 
 namespace nct::cuda {
 
-auto err_name(int code) -> const char* {
-  const auto name = cudaGetErrorName(static_cast<cudaError_t>(code));
-  return name;
+auto err_name(int err) -> const char* {
+  const auto result = static_cast<CUresult>(err);
+
+  auto err_name = static_cast<const char*>(nullptr);
+  if (cuGetErrorName(result, &err_name) != CUDA_SUCCESS) {
+    return "UNKNOWN_ERROR";
+  }
+  return err_name;
 }
 
 auto alloc_cpu(size_t size) -> void* {
   auto ptr = static_cast<void*>(::malloc(size));
   if (ptr == nullptr) {
-    throw cuda::Error{cudaErrorMemoryAllocation};
+    throw cuda::Error{CUDA_ERROR_OUT_OF_MEMORY};
   }
   return ptr;
 }
@@ -25,32 +30,32 @@ void dealloc_cpu(void* ptr) {
 }
 
 auto alloc_gpu(size_t size) -> void* {
-  auto ptr = static_cast<void*>(nullptr);
-  const auto err = ::cudaMalloc(&ptr, size);
-  if (err != cudaSuccess) {
+  auto ptr = CUdeviceptr{0};
+  if (auto err = ::cuMemAlloc(&ptr, size)) {
     throw cuda::Error{err};
   }
-  return ptr;
+  return __builtin_bit_cast(void*, ptr);
 }
 
 void dealloc_gpu(void* ptr) {
   if (ptr != nullptr) {
-    (void)::cudaFree(ptr);
+    auto dptr = __builtin_bit_cast(CUdeviceptr, ptr);
+    (void)::cuMemFree(dptr);
   }
 }
 
 auto alloc_uma(size_t size) -> void* {
   auto ptr = static_cast<void*>(nullptr);
-  const auto err = ::cudaMallocManaged(&ptr, size);
-  if (err != cudaSuccess) {
+  if (auto err = ::cuMemAllocManaged(&ptr, size, 0)) {
     throw cuda::Error{err};
   }
   return ptr;
 }
 
 void dealloc_uma(void* ptr) {
-  if (ptr != nullptr) {
-    (void)::cudaFree(ptr);
+  const auto dptr = __builtin_bit_cast(CUdeviceptr, ptr);
+  if (dptr) {
+    (void)::cuMemFree(dptr);
   }
 }
 
@@ -59,12 +64,13 @@ void prefetch_gpu(void* ptr, size_t size) {
     return;
   }
 
-  const auto loc = cudaMemLocation{
-      .type = cudaMemLocationTypeDevice,
-      .id = cuda::Device::current(),
+  const auto dptr = __builtin_bit_cast(CUdeviceptr, ptr);
+  const auto loc = CUmemLocation{
+      .type = CU_MEM_LOCATION_TYPE_DEVICE,
+      .id = Device::current().id,
   };
 
-  const auto err = cudaMemPrefetchAsync(ptr, size, loc, 0, nullptr);
+  const auto err = ::cuMemPrefetchAsync(dptr, size, loc, 0, nullptr);
   if (err) {
     throw cuda::Error{err};
   }
@@ -75,20 +81,27 @@ void prefetch_cpu(void* ptr, size_t size) {
     return;
   }
 
-  const auto loc = cudaMemLocation{
-      .type = cudaMemLocationTypeHost,
+  const auto loc = CUmemLocation{
+      .type = CU_MEM_LOCATION_TYPE_HOST,
       .id = 0,
   };
 
-  const auto err = cudaMemPrefetchAsync(ptr, size, loc, 0, nullptr);
+  const auto err = ::cuMemPrefetchAsync(ptr, size, loc, 0, nullptr);
   if (err) {
     throw cuda::Error{err};
   }
 }
 
 void write_bytes(void* ptr, u8 val, size_t size) {
+  if (ptr == nullptr || size == 0) {
+    return;
+  }
+
+  const auto dptr = __builtin_bit_cast(CUdeviceptr, ptr);
   const auto stream = cuda::stream_current();
-  const auto err = stream ? cudaMemsetAsync(ptr, val, size, stream) : cudaMemset(ptr, val, size);
+  const auto err = stream ? ::cuMemsetD8Async(dptr, val, size, stream)  // async
+                          : ::cuMemsetD8(dptr, val, size);              // sync
+
   if (err) {
     throw cuda::Error{err};
   }
@@ -99,9 +112,11 @@ void copy_bytes(const void* src, void* dst, size_t size) {
     return;
   }
 
+  const auto dptr = __builtin_bit_cast(CUdeviceptr, dst);
+  const auto sptr = __builtin_bit_cast(CUdeviceptr, src);
   const auto stream = cuda::stream_current();
-  const auto err = stream ? cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, stream)
-                          : cudaMemcpy(dst, src, size, cudaMemcpyDefault);
+  const auto err = stream ? ::cuMemcpyAsync(dptr, sptr, size, stream)  // async
+                          : ::cuMemcpy(dptr, sptr, size);              // sync
 
   if (err) {
     throw cuda::Error{err};
